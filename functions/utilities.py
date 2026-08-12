@@ -31,8 +31,8 @@ def backward_propagation(dA: np.ndarray, cache, activation = "relu"):
     A_prev, W, b = linear_cache
     m = A_prev.shape[0]
 
-    dW = 1/m * np.dot(A_prev.T, dZ)
-    db = 1/m * np.sum(dZ, axis=0, keepdims=True)
+    dW = np.dot(A_prev.T, dZ)
+    db = np.sum(dZ, axis=0, keepdims=True)
     dA_prev = np.dot(dZ, W.T)
 
     return dA_prev, dW, db
