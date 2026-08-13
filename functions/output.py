@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from activations import *
+from activations import linear, relu, sigmoid
 
 def softmax(x: np.ndarray, axis=-1, derivative: bool = False) -> np.ndarray:
     e = np.exp(x - np.max(x, axis=axis, keepdims=True))

@@ -1,7 +1,7 @@
 import numpy as np
 import math
-from activations import *
-from output import *
+from activations import linear, relu, sigmoid
+from output import softmax
 
 def forward_propagation(A_prev: np.ndarray, W: np.ndarray, b: np.ndarray, activation = "relu"):
     Z = np.dot(A_prev, W) + b
@@ -44,6 +44,41 @@ def backward_propagation(dA: np.ndarray, cache, activation = "relu"):
     dA_prev = np.dot(dZ, W.T)
 
     return dA_prev, dW, db
+
+def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
+    if to is None:
+        if targets.ndim == 1:
+            num_classes = len(set(targets))
+            converted_targets = np.eye(num_classes)[targets] #One-hot encoding
+        else:
+            converted_targets = targets
+    
+    elif to == "categorical":
+        if targets.ndim == 1:
+            num_classes = len(set(targets))
+            converted_targets = np.eye(num_classes)[targets] #One-hot encoding
+        else:
+            idx = np.argmax(targets, axis=-1)
+            converted_targets = np.zeros(targets.shape)
+            converted_targets[np.arrange(targets.shape[0], idx)] = 1
+    
+    elif to == "binary":
+        converted_targets = np.where(targets >= threshold, 1, 0)
+    
+    elif to == "labels":
+        if targets.ndim != 1:
+            converted_targets = np.argmax(targets, axis=-1)
+        else:
+            converted_targets = targets
+    
+    elif to == "probability":
+        converted_targets = softmax(targets)
+    
+    else:
+        raise ValueError(f"Unsupported target format: {to}")
+
+    return converted_targets
+
 
 
 
