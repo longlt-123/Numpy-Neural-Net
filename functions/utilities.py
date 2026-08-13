@@ -79,6 +79,18 @@ def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
 
     return converted_targets
 
+def initialize_parameters(input_size, output_size, init_type="he"):
+    np.random.seed(1)
 
+    if init_type == "zero":
+        parameter = np.zeros((input_size, output_size))
+    elif init_type == "random":
+        parameter = np.random.randn(input_size, output_size) * 0.01
+    elif init_type == "he":
+        parameter = np.random.randn(input_size, output_size) * np.sqrt(2 / input_size)
+    else:
+        raise ValueError(f"Unsupported initialize type: {init_type}")
+
+    return parameter
 
 
