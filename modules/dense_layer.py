@@ -2,12 +2,14 @@ import numpy as np
 from functions.utilities import initialize_parameters, forward_propagation, backward_propagation
 
 class Dense():
-    def __init__(self, input, number_neurons, init_type="he", activation="relu", regularizer="h2"):
-        m = input.shape[0]
+    def __init__(self, number_neurons, init_type="he", activation="relu", regularizer="h2"):
         # Initialize params
-        self.W = initialize_parameters(m, number_neurons, init_type)
-        self.b = np.zeros((number_neurons , 1))
-        self.A_prev = input
+        self.W = None
+        self.b = None
+        self.A_prev = None
+
+        self.number_neurons = number_neurons
+        self.init_type = init_type
         self.activation = activation
         self.regularizer = regularizer
 
@@ -18,12 +20,18 @@ class Dense():
 
         self.cache = None
 
+    def init_params(self, previous_layer_neurons):
+        self.W = initialize_parameters(previous_layer_neurons, self.number_neurons, self.init_type)
+        self.b = np.zeros((self.number_neurons , 1))
+        self.A_prev = input
+
+
     def update_parameters(self, learning_rate = 0.01):
         self.W -= learning_rate * self.dW
         self.b -= learning_rate * self.db
 
-    def forward(self):
-        A, self.cache = forward_propagation(self.A_prev, self.W, self.b, self.activation)
+    def forward(self, A_prev):
+        A, self.cache = forward_propagation(A_prev, self.W, self.b, self.activation)
         return A, self.cache
 
     def backward(self, dA):
