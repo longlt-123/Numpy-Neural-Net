@@ -99,6 +99,9 @@ def initialize_optimizer(W, b, optimizer="adam"):
 
     if optimizer == "gd":
         return {}, {}
+    elif optimizer == "rmsprop":
+        s["dW"] = np.zeros_like(W)
+        s["db"] = np.zeros_like(b)
     elif optimizer == "momentum":
         v["dW"] = np.zeros_like(W)
         v["db"] = np.zeros_like(b)

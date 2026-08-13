@@ -1,6 +1,8 @@
 import numpy as np
 from functions.utilities import initialize_parameters, forward_propagation, backward_propagation, initialize_optimizer
 from optimizers.adam import adam
+from optimizers.RMSprop import rmsprop
+from optimizers.momentum import momentum
 
 class Dense():
     def __init__(self, number_neurons, init_type = "he", activation = "relu", regularizer = None, lambd = 0.01, freeze = False):
@@ -40,14 +42,21 @@ class Dense():
         if self.freeze:
             pass
 
-        if optimizer == "adam":
+        if optimizer == "rmsprop":
+            self.t += 1
+            W_update, b_update, self.s = rmsprop(self.W, self.b, self.s, self.t)
+        if optimizer == "momentum":
+            self.t += 1
+            W_update, b_update, self.v = rmsprop(self.W, self.b, self.v, self.t)
+        elif optimizer == "adam":
             self.t += 1
             W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
-            self.W -= learning_rate * W_update
-            self.b -= learning_rate * b_update
         else:
-            self.W -= learning_rate * self.dW
-            self.b -= learning_rate * self.db
+            W_update = self.dW
+            b_update = self.db
+        
+        self.W -= learning_rate * W_update
+        self.b -= learning_rate * b_update
 
     def forward(self, A_prev):
         A, self.cache = forward_propagation(A_prev, self.W, self.b, self.activation)

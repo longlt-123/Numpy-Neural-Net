@@ -5,8 +5,8 @@ def adam(dW, db, v, s, t, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8):
     v["dW"] = beta1 * v["dW"] + (1 - beta1) * dW
     v["db"] = beta1 * v["db"] + (1 - beta1) * db
 
-    s["dW"] = beta2 * s["dW"] + (1 - beta2) * dW
-    s["db"] = beta2 * s["db"] + (1 - beta2) * db
+    s["dW"] = beta2 * s["dW"] + (1 - beta2) * np.square(dW)
+    s["db"] = beta2 * s["db"] + (1 - beta2) * np.square(db)
 
     v_corrected = {}                    
     s_corrected = {}
