@@ -13,7 +13,7 @@ class Dropout():
 
     def forward(self, A_prev, training = True):
         if training:
-            random_matrix = np.random.rand(A_prev.shape)
+            random_matrix = np.random.rand(*A_prev.shape)
             self.mask = random_matrix < self.keep_prob
             A = (A_prev * self.mask) / self.keep_prob
         else:

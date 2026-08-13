@@ -37,7 +37,6 @@ def backward_propagation(dA: np.ndarray, cache, activation = "relu"):
         dZ = np.einsum('ijk,ij->ik', jacobian, dA, optimize=True)
 
     A_prev, W, b = linear_cache
-    m = A_prev.shape[0]
 
     dW = np.dot(A_prev.T, dZ)
     db = np.sum(dZ, axis=0, keepdims=True)

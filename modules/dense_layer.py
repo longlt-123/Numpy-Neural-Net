@@ -5,7 +5,7 @@ from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
 class Dense():
-    def __init__(self, number_neurons, init_type = "he", activation = "relu", regularizer = None, lambd = 0.01, freeze = False):
+    def __init__(self, number_neurons, init_type = "he", activation = "linear", regularizer = None, lambd = 0.01, freeze = False):
         # Initialize params
         self.W = None
         self.b = None
@@ -16,8 +16,7 @@ class Dense():
         self.activation = activation
         self.regularizer = regularizer
         self.lambd = lambd
-        self.freeze = False
-
+        self.freeze = freeze
         # Cache for backprop
         self.dA_prev = None
         self.dW = None
@@ -38,29 +37,9 @@ class Dense():
         self.v, self.s = initialize_optimizer(self.W, self.b, optimizer)
         self.t = 0
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None):
-        if self.freeze:
-            pass
-
-        if optimizer == "rmsprop":
-            self.t += 1
-            W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t)
-        elif optimizer == "momentum":
-            self.t += 1
-            W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t)
-        elif optimizer == "adam":
-            self.t += 1
-            W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
-        else:
-            W_update = self.dW
-            b_update = self.db
-        
-        self.W -= learning_rate * W_update
-        self.b -= learning_rate * b_update
-
     def forward(self, A_prev):
         A, self.cache = forward_propagation(A_prev, self.W, self.b, self.activation)
-        return A, self.cache
+        return A
 
     def backward(self, dA):
         self.dA_prev, self.dW, self.db = backward_propagation(dA, self.cache, self.activation)
@@ -72,6 +51,26 @@ class Dense():
             self.dW += (self.lambd / m) * self.W
 
         return self.dA_prev
+
+    def update_parameters(self, learning_rate = 0.01, optimizer=None):
+            if self.freeze:
+                return
+    
+            if optimizer == "rmsprop":
+                self.t += 1
+                W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t)
+            elif optimizer == "momentum":
+                self.t += 1
+                W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t)
+            elif optimizer == "adam":
+                self.t += 1
+                W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
+            else:
+                W_update = self.dW
+                b_update = self.db
+            
+            self.W -= learning_rate * W_update
+            self.b -= learning_rate * b_update
 
     def get_regularization_penalty(self, m):
         if self.regularizer == "l1":
