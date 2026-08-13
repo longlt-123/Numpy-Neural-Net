@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 def adam(dW, db, v, s, t, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8):
     v["dW"] = beta1 * v["dW"] + (1 - beta1) * dW
@@ -11,10 +10,10 @@ def adam(dW, db, v, s, t, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8):
     v_corrected = {}                    
     s_corrected = {}
 
-    v_corrected["dW"] = v["dW"] / (1 - math.pow(beta1, t))
-    v_corrected["db"] = v["db"] / (1 - math.pow(beta1, t))
-    s_corrected["dW"] = s["dW"] / (1 - math.pow(beta2, t))
-    s_corrected["db"] = s["db"] / (1 - math.pow(beta2, t))
+    v_corrected["dW"] = v["dW"] / (1 - np.power(beta1, t))
+    v_corrected["db"] = v["db"] / (1 - np.power(beta1, t))
+    s_corrected["dW"] = s["dW"] / (1 - np.power(beta2, t))
+    s_corrected["db"] = s["db"] / (1 - np.power(beta2, t))
 
     W_update = v_corrected["dW"] / (np.sqrt(s_corrected["dW"]) + epsilon)
     b_update = v_corrected["db"] / (np.sqrt(s_corrected["db"]) + epsilon)

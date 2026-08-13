@@ -44,10 +44,10 @@ class Dense():
 
         if optimizer == "rmsprop":
             self.t += 1
-            W_update, b_update, self.s = rmsprop(self.W, self.b, self.s, self.t)
-        if optimizer == "momentum":
+            W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t)
+        elif optimizer == "momentum":
             self.t += 1
-            W_update, b_update, self.v = rmsprop(self.W, self.b, self.v, self.t)
+            W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t)
         elif optimizer == "adam":
             self.t += 1
             W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
