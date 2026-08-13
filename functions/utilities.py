@@ -84,6 +84,8 @@ def initialize_parameters(input_size, output_size, init_type="he"):
 
     if init_type == "zero":
         parameter = np.zeros((input_size, output_size))
+    elif init_type == "one":
+        parameter = np.ones((input_size, output_size))
     elif init_type == "random":
         parameter = np.random.randn(input_size, output_size) * 0.01
     elif init_type == "he":
