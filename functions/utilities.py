@@ -54,13 +54,13 @@ def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
             converted_targets = targets
     
     elif to == "categorical":
-        if targets.ndim == 1:
-            num_classes = len(set(targets))
-            converted_targets = np.eye(num_classes)[targets] #One-hot encoding
-        else:
-            idx = np.argmax(targets, axis=-1)
-            converted_targets = np.zeros(targets.shape)
-            converted_targets[np.arrange(targets.shape[0], idx)] = 1
+        num_classes = len(set(targets))
+        converted_targets = np.eye(num_classes)[targets]
+    
+    elif to == "one_hot":
+        idx = np.argmax(targets, axis=-1)
+        converted_targets = np.zeros(targets.shape)
+        converted_targets[np.arange(targets.shape[0]), idx] = 1
     
     elif to == "binary":
         converted_targets = np.where(targets >= threshold, 1, 0)
