@@ -93,4 +93,19 @@ def initialize_parameters(input_size, output_size, init_type="he"):
 
     return parameter
 
+def initialize_optimizer(W, b, optimizer="adam"):
+    v = {}
+    s = {}
 
+    if optimizer == "gd":
+        return {}, {}
+    elif optimizer == "momentum":
+        v["dW"] = np.zeros_like(W)
+        v["db"] = np.zeros_like(b)
+    elif optimizer == "adam":
+        v["dW"] = np.zeros_like(W)
+        v["db"] = np.zeros_like(b)
+        s["dW"] = np.zeros_like(W)
+        s["db"] = np.zeros_like(b)
+
+    return v, s
