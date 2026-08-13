@@ -2,7 +2,7 @@ import numpy as np
 from functions.utilities import initialize_parameters, forward_propagation, backward_propagation
 
 class Dense():
-    def __init__(self, number_neurons, init_type="he", activation="relu", regularizer="h2"):
+    def __init__(self, number_neurons, init_type="he", activation="relu", regularizer="h2", freeze = False):
         # Initialize params
         self.W = None
         self.b = None
@@ -12,6 +12,7 @@ class Dense():
         self.init_type = init_type
         self.activation = activation
         self.regularizer = regularizer
+        self.freeze = False
 
         # Cache for backprop
         self.dA_prev = None
@@ -27,6 +28,8 @@ class Dense():
 
 
     def update_parameters(self, learning_rate = 0.01):
+        if self.freeze:
+            pass
         self.W -= learning_rate * self.dW
         self.b -= learning_rate * self.db
 
