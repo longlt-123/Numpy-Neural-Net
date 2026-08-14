@@ -67,12 +67,12 @@ class NeuralNetwork():
 
         return mini_batches
 
-    def forward(self, X):
+    def forward(self, X, training = True):
         AL = X
         regularize_penalty = 0
         for layer in self.layers:
             A_prev = AL
-            AL = layer.forward(A_prev)
+            AL = layer.forward(A_prev, training)
             regularize_penalty += layer.get_regularization_penalty(X.shape[0])
         return AL, regularize_penalty
 
@@ -195,6 +195,3 @@ class NeuralNetwork():
     def predict(self, X_test):
         AL, _ = self.forward(X_test, training = False)
         return AL
-
-
-

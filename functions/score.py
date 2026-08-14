@@ -1,5 +1,5 @@
 import numpy as np
-from utilities import convert_targets
+from functions.utilities import convert_targets
 
 def accuracy_score(y_true, y_pred):
     y_true = convert_targets(y_true, to="labels")

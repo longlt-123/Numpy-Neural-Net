@@ -1,0 +1,8 @@
+# Bỏ qua thư mục cấu hình của VS Code
+.vscode/
+
+# Bỏ qua các thư mục và file cache của Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

@@ -1,7 +1,7 @@
 import numpy as np
 import math
-from activations import linear, relu, sigmoid
-from output import softmax
+from functions.activations import linear, relu, sigmoid
+from functions.output import softmax
 
 def shuffle_data(X, Y):
     m = X.shape[0]

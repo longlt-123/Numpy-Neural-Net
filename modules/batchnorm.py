@@ -4,7 +4,7 @@ from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
-from base import Layer
+from modules.base import Layer
 
 class BatchNorm(Layer):
     def __init__(self, momentum=0.9, freeze = False):

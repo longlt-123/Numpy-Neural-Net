@@ -4,7 +4,7 @@ from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
-from base import Layer
+from modules.base import Layer
 
 class Dense(Layer):
     def __init__(self, number_neurons, init_type = "he", activation = "linear", regularizer = None, lambd = 0.01, freeze = False):
@@ -33,7 +33,7 @@ class Dense(Layer):
 
     def init_params(self, previous_layer_neurons):
         self.W = initialize_parameters(previous_layer_neurons, self.number_neurons, self.init_type)
-        self.b = np.zeros((self.number_neurons , 1))
+        self.b = np.zeros((1, self.number_neurons))
 
     def init_optimizer(self, optimizer):
         self.v, self.s = initialize_optimizer(self.W, self.b, optimizer)

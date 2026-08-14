@@ -1,22 +1,13 @@
 import numpy as np
-from functions.activations import linear, relu, sigmoid
+from functions.activations import linear, relu, sigmoid, leaky_relu
 from functions.output import softmax
 
-from base import Layer
+from modules.base import Layer
 
 class Activation(Layer):
     def __init__(self, activation = "linear"):
         self.activation = activation
         self.activation_cache = None
-
-    def init_params(self):
-        pass
-
-    def init_optimizer(self):
-        pass
-
-    def update_parameters(self):
-        pass
 
     def forward(self, A_prev, training=True):
         self.activation_cache = A_prev

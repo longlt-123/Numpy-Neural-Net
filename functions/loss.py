@@ -1,6 +1,4 @@
 import numpy as np
-import math
-from utilities import *
 
 def mean_square_error(y_true: np.ndarray, y_pred: np.ndarray, derivative: bool = False, multioutput: str = 'uniform_average'):
     if derivative:
