@@ -3,6 +3,14 @@ import math
 from activations import linear, relu, sigmoid
 from output import softmax
 
+def shuffle_data(X, Y):
+    m = X.shape[0]
+    permutation = np.random.permutation(m)
+    shuffle_X = X[permutation, :]
+    shuffle_Y = Y[permutation, :]
+
+    return shuffle_X, shuffle_Y
+
 def forward_propagation(A_prev: np.ndarray, W: np.ndarray, b: np.ndarray, activation = "relu"):
     Z = np.dot(A_prev, W) + b
     linear_cache = (A_prev, W, b)
