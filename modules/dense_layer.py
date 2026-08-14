@@ -55,24 +55,24 @@ class Dense(Layer):
         return self.dA_prev
 
     def update_parameters(self, learning_rate = 0.01, optimizer=None):
-            if self.freeze:
-                return
-    
-            if optimizer == "rmsprop":
-                self.t += 1
-                W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t)
-            elif optimizer == "momentum":
-                self.t += 1
-                W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t)
-            elif optimizer == "adam":
-                self.t += 1
-                W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
-            else:
-                W_update = self.dW
-                b_update = self.db
-            
-            self.W -= learning_rate * W_update
-            self.b -= learning_rate * b_update
+        if self.freeze:
+            return
+
+        if optimizer == "rmsprop":
+            self.t += 1
+            W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t)
+        elif optimizer == "momentum":
+            self.t += 1
+            W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t)
+        elif optimizer == "adam":
+            self.t += 1
+            W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
+        else:
+            W_update = self.dW
+            b_update = self.db
+        
+        self.W -= learning_rate * W_update
+        self.b -= learning_rate * b_update
 
     def get_regularization_penalty(self, m):
         if self.regularizer == "l1":
