@@ -38,9 +38,9 @@ if __name__ == "__main__":
 
     nn = NeuralNetwork(input_dim=X_train.shape)
 
-    nn.add(Dense(number_neurons=4, activation="linear", init_type="random"))
+    nn.add(Dense(number_neurons=4, activation="linear", init_type="random", regularizer=None, freeze=False))
     nn.add(Activation(activation="sigmoid"))
-    nn.add(Dense(number_neurons=1, activation="linear", init_type="random"))
+    nn.add(Dense(number_neurons=1, activation="linear", init_type="random", regularizer=None, freeze=False))
     nn.add(Activation(activation="sigmoid"))
 
     training_set = (X_train, Y_train)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         verbose=True
     )
 
-    predictions, _ = nn.forward(X_train, training=False)
+    predictions = nn.predict(X_train)
 
     for i in range(len(X_train)):
         prob = predictions[i][0]
