@@ -16,6 +16,8 @@ class Activation(Layer):
             A = linear(A_prev)
         elif self.activation == "relu":
             A = relu(A_prev)
+        elif self.activation == "leaky_relu":
+            A = leaky_relu(A_prev)
         elif self.activation == "sigmoid":
             A = sigmoid(A_prev)
         elif self.activation == "softmax":
@@ -28,6 +30,8 @@ class Activation(Layer):
             dA_prev = linear(self.activation_cache, derivative=True) * dA
         elif self.activation == "relu":
             dA_prev = relu(self.activation_cache, derivative=True) * dA
+        elif self.activation == "leaky_relu":
+            dA_prev = leaky_relu(self.activation_cache, derivative=True) * dA
         elif self.activation == "sigmoid":
             dA_prev = sigmoid(self.activation_cache, derivative=True) * dA
         elif self.activation == "softmax":

@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from functions.activations import linear, relu, sigmoid
+from functions.activations import linear, relu, sigmoid, leaky_relu
 from functions.output import softmax
 
 def shuffle_data(X, Y):
@@ -20,6 +20,8 @@ def forward_propagation(A_prev: np.ndarray, W: np.ndarray, b: np.ndarray, activa
         A = linear(Z)
     elif activation == "relu":
         A = relu(Z)
+    elif activation == "leaky_relu":
+        A = leaky_relu(A_prev)
     elif activation == "sigmoid":
         A = sigmoid(Z)
     elif activation == "softmax":
@@ -36,6 +38,8 @@ def backward_propagation(dA: np.ndarray, cache, activation = "relu"):
         dZ = linear(activation_cache, derivative=True) * dA
     elif activation == "relu":
         dZ = relu(activation_cache, derivative=True) * dA
+    elif activation == "leaky_relu":
+        dZ = leaky_relu(activation_cache, derivative=True) * dA
     elif activation == "sigmoid":
         dZ = sigmoid(activation_cache, derivative=True) * dA
     elif activation == "softmax":

@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from functions.activations import relu, linear, sigmoid
 from functions.output import softmax
@@ -64,3 +65,21 @@ if __name__ == "__main__":
         true_label = Y_train[i][0]
         
         print(f"Đầu vào X: {X_train[i]} | Dự đoán: {prob:.4f} -> {pred_label} | Thực tế: {true_label}")
+
+    epochs = range(1, len(training_costs) + 1)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, training_costs, label='Training Loss', color='blue', linewidth=2)
+
+    if validation_costs:
+        plt.plot(epochs, validation_costs, label='Validation Loss', color='red', linewidth=2, linestyle='--')
+
+    plt.title('Biểu đồ biểu diễn Loss qua từng Epoch', fontsize=16, fontweight='bold')
+    plt.xlabel('Epochs', fontsize=12)
+    plt.ylabel('Loss (Binary Cross Entropy)', fontsize=12)
+
+    plt.legend(fontsize=12)
+    plt.grid(True, linestyle=':', alpha=0.7)
+
+    plt.tight_layout()
+    plt.show()
