@@ -70,7 +70,7 @@ training_costs, validation_costs, learning_rates = nn.fit(
 ### Predict
 
 ```python
-predictions, _ = nn.forward(X_train, training=False)
+predictions = nn.predict(X_train)
 ```
 
 ### Result
