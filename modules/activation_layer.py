@@ -2,21 +2,23 @@ import numpy as np
 from functions.activations import linear, relu, sigmoid
 from functions.output import softmax
 
-class Activation():
+from base import Layer
+
+class Activation(Layer):
     def __init__(self, activation = "linear"):
         self.activation = activation
         self.activation_cache = None
 
-    def init_params():
+    def init_params(self):
         pass
 
-    def init_optimizer():
+    def init_optimizer(self):
         pass
 
-    def update_parameters():
+    def update_parameters(self):
         pass
 
-    def forward(self, A_prev):
+    def forward(self, A_prev, training=True):
         self.activation_cache = A_prev
 
         if self.activation == "linear":

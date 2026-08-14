@@ -1,6 +1,8 @@
 import numpy as np
 
-class Dropout():
+from base import Layer
+
+class Dropout(Layer):
     def __init__(self, keep_prob = 0.8):
         self.keep_prob = keep_prob
         self.mask = None

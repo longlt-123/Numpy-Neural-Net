@@ -4,7 +4,9 @@ from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
-class Dense():
+from base import Layer
+
+class Dense(Layer):
     def __init__(self, number_neurons, init_type = "he", activation = "linear", regularizer = None, lambd = 0.01, freeze = False):
         # Initialize params
         self.W = None
@@ -37,7 +39,7 @@ class Dense():
         self.v, self.s = initialize_optimizer(self.W, self.b, optimizer)
         self.t = 0
 
-    def forward(self, A_prev):
+    def forward(self, A_prev, training = True):
         A, self.cache = forward_propagation(A_prev, self.W, self.b, self.activation)
         return A
 

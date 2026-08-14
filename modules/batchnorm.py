@@ -4,9 +4,12 @@ from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
-class BatchNorm():
+from base import Layer
+
+class BatchNorm(Layer):
     def __init__(self, momentum=0.9, freeze = False):
         self.freeze = freeze
+        self.number_neurons = None
         self.moving_mean = None
         self.moving_var = None
         self.batch_mean = None
@@ -28,6 +31,7 @@ class BatchNorm():
     def init_params(self, previous_layer_neurons):
         self.gamma = np.ones((1, previous_layer_neurons))
         self.beta = np.zeros((1, previous_layer_neurons))
+        self.number_neurons = previous_layer_neurons
 
         self.moving_mean = np.zeros((1, previous_layer_neurons))
         self.moving_var = np.ones((1, previous_layer_neurons))
