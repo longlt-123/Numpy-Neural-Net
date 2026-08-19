@@ -17,7 +17,7 @@ from optimizers.learning_rate_decay import decay_with_decay_rate, decay_with_sta
 from optimizers.momentum import momentum
 from optimizers.RMSprop import rmsprop
 
-class NeuralNetwork():
+class MLP():
     def __init__(self, input_dim, layers: list[Layer] = None):
         self.layers: list = []
         self.optimizer = None

@@ -18,7 +18,7 @@ from optimizers.learning_rate_decay import decay_with_decay_rate, decay_with_sta
 from optimizers.momentum import momentum
 from optimizers.RMSprop import rmsprop
 
-from neural_network import NeuralNetwork
+from neural_network.MLP.mlp_net import MLP
 
 
 if __name__ == "__main__":
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         [0]
     ])
 
-    nn = NeuralNetwork(input_dim=X_train.shape)
+    nn = MLP(input_dim=X_train.shape)
 
     nn.add(Dense(number_neurons=4, activation="linear", init_type="random", regularizer=None, freeze=False))
     nn.add(Activation(activation="sigmoid"))
