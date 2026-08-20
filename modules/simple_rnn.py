@@ -39,6 +39,11 @@ class Simple_RNN():
         self.dba_opp = None
         self.dWya_opp = None
 
+        self.Wa_right = None
+        self.Wa_opp = None
+        self.dWa_right = None
+        self.dWa_opp = None
+
         self.a_right_caches = []
         self.a_prev_right_caches = []
         self.a_opp_caches = []
@@ -55,13 +60,15 @@ class Simple_RNN():
         self.freeze = freeze
 
     def init_optimizer(self, optimizer):
-        self.Wa_right = np.concatenate((self.Wax_right, self.Waa_right), axis=0)
+        self.Wa_right = np.concatenate((self.Waa_right, self.Wax_right), axis=0)
         self.ba_right = self.ba_right
         self.v_right, self.s_right = initialize_optimizer(self.Wa_right, self.ba_right, optimizer)
 
-        self.Wa_opp = np.concatenate((self.Wax_opp, self.Waa_opp), axis=0)
-        self.ba_opp = self.ba_opp
-        self.v_opp, self.s_opp = initialize_optimizer(self.Wa_opp, self.ba_opp, optimizer)
+        if self.bidirectional:
+            self.Wa_opp = np.concatenate((self.Waa_opp, self.Wax_opp), axis=0)
+            self.ba_opp = self.ba_opp
+            self.v_opp, self.s_opp = initialize_optimizer(self.Wa_opp, self.ba_opp, optimizer)
+
         self.t = 0
 
     def init_params(self, input_dims):
@@ -96,6 +103,8 @@ class Simple_RNN():
 
         self.a_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.a_prev_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
+        self.a_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
+        self.a_prev_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.xt_caches = np.zeros((self.batch_size, self.T_x, self.n_x))
         self.y_pred_caches = np.zeros((self.batch_size, self.T_y, self.n_x))
 
@@ -125,9 +134,9 @@ class Simple_RNN():
 
         return self.a_right_caches, self.a_opp_caches, self.y_pred_caches, self.x
 
-    def rnn_cell_backward(self, dA, xt, a_prev, bidirectional = False):
+    def rnn_cell_backward(self, dA, a, xt, a_prev, bidirectional = False):
         if bidirectional == False:
-            dtanh = dA * (1 - np.tanh(np.dot(xt, self.Wax_right) + np.dot(a_prev, self.Waa_right) + self.ba_right) ** 2)
+            dtanh = dA * (1 - a ** 2)
 
             dxt = np.dot(dtanh, self.Wax_right.T)
             da_prev = np.dot(dtanh, self.Waa_right.T)
@@ -136,7 +145,7 @@ class Simple_RNN():
             dba_right = np.sum(dtanh, axis=-1, keepdims=True)
             return dxt, da_prev, dWax_right, dWaa_right, dba_right
         else:
-            dtanh = dA * (1 - np.tanh(np.dot(xt, self.Wax_opp) + np.dot(a_prev, self.Waa_opp) + self.ba_opp) ** 2)
+            dtanh = dA * (1 - a ** 2)
 
             dxt = np.dot(dtanh, self.Wax_opp.T)
             da_prev = np.dot(dtanh, self.Waa_opp.T)
@@ -181,26 +190,30 @@ class Simple_RNN():
 
         for t in reversed(range(self.T_x)):
             xt = self.xt_caches[:,t,:]
+            at_right = self.a_right_caches[:,t,:]
             a_prev_right = self.a_prev_right_caches[:,t,:]
             dA_t_right = dA_right[:,t,:]
 
-            dxt_right, da_prevt_right, dWax_right, dWaa_right, dba_right = self.rnn_cell_backward(da_prevt_right + dA_t_right, xt, a_prev_right, bidirectional=False)
+            dxt_right, da_prevt_right, dWax_right, dWaa_right, dba_right = self.rnn_cell_backward(da_prevt_right + dA_t_right, at_right, xt, a_prev_right, bidirectional=False)
 
             self.dWax_right += dWax_right
             self.dWaa_right += dWaa_right
             self.dba_right += dba_right
-            self.dxt[:,t,:] += dxt_right
+            self.dx[:,t,:] += dxt_right
 
-            if self.bidirectional:
+        if self.bidirectional:
+            for t in range(self.T_x):
+                xt = self.xt_caches[:,t,:]
+                at_opp = self.a_opp_caches[:,t,:]
                 a_prev_opp = self.a_prev_opp_caches[:,t,:]
                 dA_t_opp = dA_opp[:,t,:]
 
-                dxt_opp, da_prevt_opp, dWax_opp, dWaa_opp, dba_opp = self.rnn_cell_backward(da_prevt_opp + dA_t_opp, xt, a_prev_opp, bidirectional=True)
+                dxt_opp, da_prevt_opp, dWax_opp, dWaa_opp, dba_opp = self.rnn_cell_backward(da_prevt_opp + dA_t_opp, at_opp, xt, a_prev_opp, bidirectional=True)
 
                 self.dWax_opp += dWax_opp
                 self.dWaa_opp += dWaa_opp
                 self.dba_opp += dba_opp
-                self.dxt[:,t,:] += dxt_opp
+                self.dx[:,t,:] += dxt_opp
 
         m = self.batch_size
         
@@ -247,33 +260,43 @@ class Simple_RNN():
     def update_parameters(self, learning_rate = 0.01, optimizer=None):
         if self.freeze:
             return
+        
+        self.dWa_right = np.concatenate((self.dWaa_right, self.dWax_right), axis=0)
+        if self.bidirectional:
+            self.dWa_opp = np.concatenate((self.dWaa_opp, self.dWax_opp), axis=0)
 
         if optimizer == "rmsprop":
             self.t += 1
-            Wa_right_update, ba_right_update, self.s_right = rmsprop(self.dWax_right, self.dba_right, self.s_right, self.t)
-            Wa_opp_update, ba_opp_update, self.s_opp = rmsprop(self.dWax_opp, self.dba_opp, self.s_opp, self.t)
+            Wa_right_update, ba_right_update, self.s_right = rmsprop(self.dWa_right, self.dba_right, self.s_right, self.t)
+            Wa_opp_update, ba_opp_update, self.s_opp = rmsprop(self.dWa_opp, self.dba_opp, self.s_opp, self.t)
         elif optimizer == "momentum":
             self.t += 1
-            Wa_right_update, ba_right_update, self.v_right = momentum(self.dWax_right, self.dba_right, self.v_right, self.t)
-            Wa_opp_update, ba_opp_update, self.v_opp = momentum(self.dWax_opp, self.dba_opp, self.v_opp, self.t)
+            Wa_right_update, ba_right_update, self.v_right = momentum(self.dWa_right, self.dba_right, self.v_right, self.t)
+            Wa_opp_update, ba_opp_update, self.v_opp = momentum(self.dWa_opp, self.dba_opp, self.v_opp, self.t)
         elif optimizer == "adam":
             self.t += 1
-            Wa_right_update, ba_right_update, self.v_right, self.s_right, _, _ = adam(self.dWax_right, self.dba_right, self.v_right, self.s_right, self.t)
-            Wa_opp_update, ba_opp_update, self.v_opp, self.s_opp, _, _ = adam(self.dWax_opp, self.dba_opp, self.v_opp, self.s_opp, self.t)
+            Wa_right_update, ba_right_update, self.v_right, self.s_right, _, _ = adam(self.dWa_right, self.dba_right, self.v_right, self.s_right, self.t)
+            Wa_opp_update, ba_opp_update, self.v_opp, self.s_opp, _, _ = adam(self.dWa_opp, self.dba_opp, self.v_opp, self.s_opp, self.t)
         else:
-            Wa_right_update = self.dWax_right
+            Wa_right_update = self.dWa_right
             ba_right_update = self.dba_right
-            Wa_opp_update = self.dWax_opp
+            Wa_opp_update = self.dWa_opp
             ba_opp_update = self.dba_opp
 
-        self.Wa_right -= learning_rate * Wa_right_update
+        self.Waa_right -= learning_rate * Wa_right_update[:self.n_a,:]
+        self.Wax_right -= learning_rate * Wa_right_update[self.n_a:,:]
         self.ba_right -= learning_rate * ba_right_update
-        self.Wa_opp -= learning_rate * Wa_opp_update
+        self.Waa_opp -= learning_rate * Wa_opp_update[:self.n_a,:]
+        self.Wax_opp -= learning_rate * Wa_opp_update[self.n_a:,:]
         self.ba_opp -= learning_rate * ba_opp_update
 
     def get_regularization_penalty(self, m):
         if self.regularizer == "l1":
-            return (self.lambd / m) * np.sum(np.abs(self.Wa_right)) + (self.lambd / m) * np.sum(np.abs(self.Wa_opp))
+            pen = (self.lambd / m) * np.sum(np.abs(self.Wa_right)) 
+            if self.bidirectional:
+                pen += (self.lambd / m) * np.sum(np.abs(self.Wa_opp))
         elif self.regularizer == "l2":
-            return (self.lambd / (2 * m)) * np.sum(np.square(self.Wa_right)) + (self.lambd / (2 * m)) * np.sum(np.square(self.Wa_opp))
-        return 0.0
+            pen = (self.lambd / (2 * m)) * np.sum(np.square(self.Wa_right))
+            if self.bidirectional:
+                pen += (self.lambd / (2 * m)) * np.sum(np.square(self.Wa_opp))
+        return pen
