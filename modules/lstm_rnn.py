@@ -10,7 +10,7 @@ from optimizers.momentum import momentum
 from base import Layer
 
 class LSTM():
-    def __init__(self, hidden_state_dim, init_type = "he", activation = "softmax", regularizer = None, lambd = 0.01, freeze = False):
+    def __init__(self, hidden_state_dim, init_type = "he", activation = "softmax", bidirectional = False, regularizer = None, lambd = 0.01, freeze = False):
         self.x =  None
         self.batch_size = None
         self.n_x = None
@@ -55,6 +55,7 @@ class LSTM():
         self.xt_caches = self.x
 
         self.init_type = init_type
+        self.bidirectional = bidirectional
         self.activation = activation
         self.regularization = regularizer
         self.lambd = lambd
