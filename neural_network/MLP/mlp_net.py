@@ -4,7 +4,7 @@ from functions.activations import relu, linear, sigmoid
 from functions.output import softmax
 from functions.loss import mean_square_error, categorical_cross_entropy, binary_cross_entropy
 from functions.score import accuracy_score, precision_score, recall_score, f1_score
-from functions.utilities import forward_propagation, backward_propagation, convert_targets, initialize_parameters, initialize_optimizer, shuffle_data
+from functions.utilities import random_mini_batch, convert_targets, initialize_parameters, initialize_optimizer, shuffle_data
 
 from modules.base import Layer
 from modules.activation_layer import Activation
@@ -26,7 +26,7 @@ class MLP():
         self.regularize_penalty = 0
 
         if isinstance(input_dim, tuple):
-            self.current_layer_neurons = input_dim[1]
+            self.current_layer_neurons = input_dim[-1]
         else:
             self.current_layer_neurons = input_dim
 
@@ -41,31 +41,6 @@ class MLP():
             layer.init_params(self.current_layer_neurons)
             self.current_layer_neurons = layer.number_neurons
         self.layers.append(layer)
-
-    @staticmethod
-    def random_mini_batch(X, Y, mini_batch_size = 64, seed = 0):
-        if seed != 0:
-            np.random.seed(seed)
-        
-        m = X.shape[0]
-        shuffle_X, shuffle_Y = shuffle_data(X, Y)
-
-        mini_batches = []
-
-        num_complete_minibatches = m // mini_batch_size
-        for k in range(num_complete_minibatches):
-            mini_batch_X = shuffle_X[k * mini_batch_size : (k+1) * mini_batch_size, :]
-            mini_batch_Y = shuffle_Y[k * mini_batch_size : (k+1) * mini_batch_size, :]
-            mini_batch = (mini_batch_X, mini_batch_Y)
-            mini_batches.append(mini_batch)
-
-        if m % mini_batch_size != 0:
-            mini_batch_X = shuffle_X[num_complete_minibatches * mini_batch_size :, :]
-            mini_batch_Y = shuffle_Y[num_complete_minibatches * mini_batch_size :, :]
-            mini_batch = (mini_batch_X, mini_batch_Y)
-            mini_batches.append(mini_batch)
-
-        return mini_batches
 
     def forward(self, X, training = True):
         AL = X
@@ -82,6 +57,8 @@ class MLP():
             dA = dA_prev
             dA_prev = layer.backward(dA)
             layer.update_parameters(self.learning_rate, self.optimizer)
+
+        return dA_prev
 
     def compute_cost(self, Y_true, Y_pred, derivative = False):
         if self.cost_func == "mse":
@@ -140,7 +117,7 @@ class MLP():
 
         for epoch in range(0, num_epochs):
             seed = seed + 1
-            training_mini_batches = self.random_mini_batch(X_train, Y_train, mini_batch_size, seed)
+            training_mini_batches = random_mini_batch(X_train, Y_train, mini_batch_size, seed)
             total_training_cost = 0
             num_train_batches = len(training_mini_batches)
 
@@ -155,7 +132,7 @@ class MLP():
                 total_training_cost += batch_train_cost
 
                 dL = self.compute_cost(mini_batch_Y, AL, derivative=True)
-                self.backward(dL)
+                da_prev = self.backward(dL)
 
                 if verbose:
                     print(f"Training   | Batch {batch_idx + 1}/{num_train_batches} - Loss: {batch_train_cost:.4f}", end='\r')
@@ -167,7 +144,7 @@ class MLP():
                 print()
 
             if validation_set is not None:
-                validation_mini_batches = self.random_mini_batch(X_val, Y_val, mini_batch_size, seed)
+                validation_mini_batches = random_mini_batch(X_val, Y_val, mini_batch_size, seed)
                 total_validation_cost = 0
                 num_val_batches = len(validation_mini_batches)
 

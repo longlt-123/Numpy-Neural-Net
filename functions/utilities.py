@@ -11,50 +11,29 @@ def shuffle_data(X, Y):
 
     return shuffle_X, shuffle_Y
 
-def forward_propagation(A_prev: np.ndarray, W: np.ndarray, b: np.ndarray, activation = "relu"):
-    Z = np.dot(A_prev, W) + b
-    linear_cache = (A_prev, W, b)
-    activation_cache = Z
+def random_mini_batch(X, Y, mini_batch_size = 64, seed = 0):
+        if seed != 0:
+            np.random.seed(seed)
+        
+        m = X.shape[0]
+        shuffle_X, shuffle_Y = shuffle_data(X, Y)
 
-    if activation == "linear":
-        A = linear(Z)
-    elif activation == "relu":
-        A = relu(Z)
-    elif activation == "leaky_relu":
-        A = leaky_relu(A_prev)
-    elif activation == "sigmoid":
-        A = sigmoid(Z)
-    elif activation == "softmax":
-        A = softmax(Z)
+        mini_batches = []
 
-    cache = (linear_cache, activation_cache)
-    return A, cache
+        num_complete_minibatches = m // mini_batch_size
+        for k in range(num_complete_minibatches):
+            mini_batch_X = shuffle_X[k * mini_batch_size : (k+1) * mini_batch_size, :]
+            mini_batch_Y = shuffle_Y[k * mini_batch_size : (k+1) * mini_batch_size, :]
+            mini_batch = (mini_batch_X, mini_batch_Y)
+            mini_batches.append(mini_batch)
 
+        if m % mini_batch_size != 0:
+            mini_batch_X = shuffle_X[num_complete_minibatches * mini_batch_size :, :]
+            mini_batch_Y = shuffle_Y[num_complete_minibatches * mini_batch_size :, :]
+            mini_batch = (mini_batch_X, mini_batch_Y)
+            mini_batches.append(mini_batch)
 
-def backward_propagation(dA: np.ndarray, cache, activation = "relu"):
-    linear_cache, activation_cache = cache
-
-    if activation == "linear":
-        dZ = linear(activation_cache, derivative=True) * dA
-    elif activation == "relu":
-        dZ = relu(activation_cache, derivative=True) * dA
-    elif activation == "leaky_relu":
-        dZ = leaky_relu(activation_cache, derivative=True) * dA
-    elif activation == "sigmoid":
-        dZ = sigmoid(activation_cache, derivative=True) * dA
-    elif activation == "softmax":
-        # Lấy ma trận Jacobian 3D, kích thước (m, c, c)
-        jacobian = softmax(activation_cache, derivative=True)
-        # Nhân chập: dZ[i, k] = tổng_j(dA[i, j] * jacobian[i, j, k])
-        dZ = np.einsum('ijk,ij->ik', jacobian, dA, optimize=True)
-
-    A_prev, W, b = linear_cache
-
-    dW = np.dot(A_prev.T, dZ)
-    db = np.sum(dZ, axis=0, keepdims=True)
-    dA_prev = np.dot(dZ, W.T)
-
-    return dA_prev, dW, db
+        return mini_batches
 
 def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
     if to is None:

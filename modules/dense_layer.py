@@ -1,8 +1,10 @@
 import numpy as np
-from functions.utilities import initialize_parameters, forward_propagation, backward_propagation, initialize_optimizer
+from functions.output import softmax
+from functions.utilities import initialize_parameters, initialize_optimizer
 from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
+from functions.activations import linear, relu, sigmoid, leaky_relu
 
 from modules.base import Layer
 
@@ -39,12 +41,64 @@ class Dense(Layer):
         self.v, self.s = initialize_optimizer(self.W, self.b, optimizer)
         self.t = 0
 
+    def forward_propagation(self, A_prev: np.ndarray, W: np.ndarray, b: np.ndarray, activation = "relu"):
+        Z = np.matmul(A_prev, W) + b
+        linear_cache = (A_prev, W, b)
+        activation_cache = Z
+
+        if activation == "linear":
+            A = linear(Z)
+        elif activation == "relu":
+            A = relu(Z)
+        elif activation == "leaky_relu":
+            A = leaky_relu(Z)
+        elif activation == "sigmoid":
+            A = sigmoid(Z)
+        elif activation == "softmax":
+            A = softmax(Z)
+
+        cache = (linear_cache, activation_cache)
+        return A, cache
+
+
+    def backward_propagation(self, dA: np.ndarray, cache, activation = "relu"):
+        linear_cache, activation_cache = cache
+
+        if activation == "linear":
+            dZ = linear(activation_cache, derivative=True) * dA
+        elif activation == "relu":
+            dZ = relu(activation_cache, derivative=True) * dA
+        elif activation == "leaky_relu":
+            dZ = leaky_relu(activation_cache, derivative=True) * dA
+        elif activation == "sigmoid":
+            dZ = sigmoid(activation_cache, derivative=True) * dA
+        elif activation == "softmax":
+            # Lấy ma trận Jacobian 3D, kích thước (m, c, c)
+            jacobian = softmax(activation_cache, derivative=True)
+            # Nhân chập: dZ[i, k] = tổng_j(dA[i, j] * jacobian[i, j, k])
+            dZ = np.einsum('...pq,...p->...q', jacobian, dA, optimize=True)
+
+        A_prev, W, b = linear_cache
+
+        dW = np.einsum("...i,...j->ij", A_prev, dZ,optimize=True)
+        reduce_axes = tuple(range(dZ.ndim - 1))
+
+        if len(reduce_axes) > 0:
+            db = np.sum(dZ, axis=reduce_axes, keepdims=True)
+            db = db.reshape(1, dZ.shape[-1])
+
+        else:
+            db = dZ.reshape(1, -1)
+        dA_prev = np.matmul(dZ, W.T)
+
+        return dA_prev, dW, db
+    
     def forward(self, A_prev, training = True):
-        A, self.cache = forward_propagation(A_prev, self.W, self.b, self.activation)
+        A, self.cache = self.forward_propagation(A_prev, self.W, self.b, self.activation)
         return A
 
     def backward(self, dA):
-        self.dA_prev, self.dW, self.db = backward_propagation(dA, self.cache, self.activation)
+        self.dA_prev, self.dW, self.db = self.backward_propagation(dA, self.cache, self.activation)
 
         m = dA.shape[0]
         if self.regularizer == "l1":
