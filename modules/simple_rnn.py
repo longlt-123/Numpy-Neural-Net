@@ -2,7 +2,7 @@ import numpy as np
 
 from functions.activations import relu, linear, sigmoid, leaky_relu
 from functions.output import softmax
-from functions.utilities import initialize_parameters, forward_propagation, backward_propagation, initialize_optimizer
+from functions.utilities import initialize_parameters, initialize_optimizer
 from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
@@ -50,19 +50,30 @@ class Simple_RNN():
         self.a_prev_opp_caches = []
         self.y_pred_caches = []
         self.xt_caches = []
-        self.dx = []
+        self.dxt_caches = []
 
         self.bidirectional = bidirectional
         self.init_type = init_type
         self.merge_mode = merge_mode
-        self.regularization = regularizer
+        self.regularizer = regularizer
         self.lambd = lambd
         self.freeze = freeze
+
+        self.v_right = None
+        self.s_right = None
+        self.v_opp = None
+        self.s_opp = None
+        self.t = None
 
     def init_optimizer(self, optimizer):
         self.Wa_right = np.concatenate((self.Waa_right, self.Wax_right), axis=0)
         self.ba_right = self.ba_right
         self.v_right, self.s_right = initialize_optimizer(self.Wa_right, self.ba_right, optimizer)
+        print("optimizer =", optimizer)
+        print("Wa_right =", self.Wa_right.shape)
+        print("ba_right =", self.ba_right.shape)
+        print("v_right =", self.v_right)
+        print("s_right =", self.s_right)
 
         if self.bidirectional:
             self.Wa_opp = np.concatenate((self.Waa_opp, self.Wax_opp), axis=0)
@@ -72,24 +83,31 @@ class Simple_RNN():
         self.t = 0
 
     def init_params(self, input_dims):
-        self.batch_size = input_dims[0]
-        self.n_x = input_dims[2]
-        self.T_x = input_dims[1]
-        self.T_y = self.T_x
+        self.n_x = input_dims
         
         self.Waa_right = initialize_parameters(self.n_a, self.n_a, self.init_type)
         self.Wax_right = initialize_parameters(self.n_x, self.n_a, self.init_type)
         self.ba_right = initialize_parameters(1, self.n_a, self.init_type)
-
-        self.Wya_right = initialize_parameters(self.n_a, self.n_x, self.init_type)
-        self.by = initialize_parameters(1, self.n_x, "zero")
 
         if self.bidirectional:
             self.Waa_opp = initialize_parameters(self.n_a, self.n_a, self.init_type)
             self.Wax_opp = initialize_parameters(self.n_x, self.n_a, self.init_type)
             self.ba_opp = initialize_parameters(1, self.n_a, self.init_type)
 
-            self.Wya_opp = initialize_parameters(self.n_a, self.n_x, self.init_type)
+
+    def init_caches(self, input):
+        self.batch_size = input.shape[0]
+        self.n_x = input.shape[2]
+        self.T_x = input.shape[1]
+        self.T_y = self.T_x
+
+        self.a_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
+        self.a_prev_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
+        self.xt_caches = np.zeros((self.batch_size, self.T_x, self.n_x))
+
+        if self.bidirectional:
+            self.a_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
+            self.a_prev_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
 
     def rnn_cell_forward(self, xt, a_prev, bidirectional = False):
         if bidirectional == False:
@@ -100,13 +118,16 @@ class Simple_RNN():
 
     def forward(self, input, training = True):
         self.x = input
+        self.batch_size = input.shape[0]
+        self.n_x = input.shape[2]
+        self.T_x = input.shape[1]
+        self.T_y = self.T_x
 
         self.a_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.a_prev_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.a_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.a_prev_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.xt_caches = np.zeros((self.batch_size, self.T_x, self.n_x))
-        self.y_pred_caches = np.zeros((self.batch_size, self.T_y, self.n_x))
 
         a_right = np.zeros((self.batch_size, self.n_a))
         for t in range(self.T_x):
@@ -116,7 +137,6 @@ class Simple_RNN():
 
             a_right = self.rnn_cell_forward(xt, a_right, bidirectional=False)
             self.a_right_caches[:,t,:] = a_right
-            self.y_pred_caches[:,t,:] += np.dot(a_right, self.Wya_right)
 
         if self.bidirectional:
             self.a_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
@@ -127,12 +147,11 @@ class Simple_RNN():
                 self.a_prev_opp_caches[:,t,:] = a_opp
 
                 a_opp = self.rnn_cell_forward(xt, a_opp, bidirectional=True)
-                self.y_pred_caches[:,t,:] += np.dot(a_opp, self.Wya_opp)
                 self.a_opp_caches[:,t,:] = a_opp
 
-        self.y_pred_caches = softmax(self.y_pred_caches + self.by, axis=-1)
+        A = self.compute_hidden_state_for_next_layer()
 
-        return self.a_right_caches, self.a_opp_caches, self.y_pred_caches, self.x
+        return A
 
     def rnn_cell_backward(self, dA, a, xt, a_prev, bidirectional = False):
         if bidirectional == False:
@@ -142,7 +161,7 @@ class Simple_RNN():
             da_prev = np.dot(dtanh, self.Waa_right.T)
             dWax_right = np.dot(xt.T, dtanh)
             dWaa_right = np.dot(a_prev.T, dtanh)
-            dba_right = np.sum(dtanh, axis=-1, keepdims=True)
+            dba_right = np.sum(dtanh, axis=0, keepdims=True)
             return dxt, da_prev, dWax_right, dWaa_right, dba_right
         else:
             dtanh = dA * (1 - a ** 2)
@@ -151,17 +170,15 @@ class Simple_RNN():
             da_prev = np.dot(dtanh, self.Waa_opp.T)
             dWax_opp = np.dot(xt.T, dtanh)
             dWaa_opp = np.dot(a_prev.T, dtanh)
-            dba_opp = np.sum(dtanh, axis=-1, keepdims=True)
+            dba_opp = np.sum(dtanh, axis=0, keepdims=True)
             return dxt, da_prev, dWax_opp, dWaa_opp, dba_opp
 
-    def backward(self, dA, dL = None):
-        self.dx = np.zeros_like(self.x)
+    def backward(self, dA):
+        self.dxt_caches = np.zeros_like(self.xt_caches)
 
         self.dWaa_right = np.zeros_like(self.Waa_right)
         self.dWax_right = np.zeros_like(self.Wax_right)
         self.dba_right = np.zeros_like(self.ba_right)
-        self.dWya_right = np.zeros_like(self.Wya_right)
-        self.dby = np.zeros_like(self.by)
 
         if self.bidirectional == False:
             dA_right = dA
@@ -199,7 +216,7 @@ class Simple_RNN():
             self.dWax_right += dWax_right
             self.dWaa_right += dWaa_right
             self.dba_right += dba_right
-            self.dx[:,t,:] += dxt_right
+            self.dxt_caches[:,t,:] += dxt_right
 
         if self.bidirectional:
             for t in range(self.T_x):
@@ -213,7 +230,7 @@ class Simple_RNN():
                 self.dWax_opp += dWax_opp
                 self.dWaa_opp += dWaa_opp
                 self.dba_opp += dba_opp
-                self.dx[:,t,:] += dxt_opp
+                self.dxt_caches[:,t,:] += dxt_opp
 
         m = self.batch_size
         
@@ -233,15 +250,16 @@ class Simple_RNN():
                 self.dWaa_opp += (self.lambd / m) * self.Waa_opp
                 self.dWax_opp += (self.lambd / m) * self.Wax_opp
                 self.dba_opp += (self.lambd / m) * self.ba_opp
+        
         gradients = {
-            "dx": self.dx,
+            "dx": self.dxt_caches,
             "dWaa": self.dWaa_right,
             "dWax": self.dWax_right,
             "dba": self.dba_right,
             "dWya": self.dWya_right,
             "dby": self.dby,
         }
-        return gradients
+        return self.dxt_caches
 
 
     def compute_hidden_state_for_next_layer(self):
@@ -268,27 +286,32 @@ class Simple_RNN():
         if optimizer == "rmsprop":
             self.t += 1
             Wa_right_update, ba_right_update, self.s_right = rmsprop(self.dWa_right, self.dba_right, self.s_right, self.t)
-            Wa_opp_update, ba_opp_update, self.s_opp = rmsprop(self.dWa_opp, self.dba_opp, self.s_opp, self.t)
+            if self.bidirectional:
+                Wa_opp_update, ba_opp_update, self.s_opp = rmsprop(self.dWa_opp, self.dba_opp, self.s_opp, self.t)
         elif optimizer == "momentum":
             self.t += 1
             Wa_right_update, ba_right_update, self.v_right = momentum(self.dWa_right, self.dba_right, self.v_right, self.t)
-            Wa_opp_update, ba_opp_update, self.v_opp = momentum(self.dWa_opp, self.dba_opp, self.v_opp, self.t)
+            if self.bidirectional:
+                Wa_opp_update, ba_opp_update, self.v_opp = momentum(self.dWa_opp, self.dba_opp, self.v_opp, self.t)
         elif optimizer == "adam":
             self.t += 1
             Wa_right_update, ba_right_update, self.v_right, self.s_right, _, _ = adam(self.dWa_right, self.dba_right, self.v_right, self.s_right, self.t)
-            Wa_opp_update, ba_opp_update, self.v_opp, self.s_opp, _, _ = adam(self.dWa_opp, self.dba_opp, self.v_opp, self.s_opp, self.t)
+            if self.bidirectional:
+                Wa_opp_update, ba_opp_update, self.v_opp, self.s_opp, _, _ = adam(self.dWa_opp, self.dba_opp, self.v_opp, self.s_opp, self.t)
         else:
             Wa_right_update = self.dWa_right
             ba_right_update = self.dba_right
-            Wa_opp_update = self.dWa_opp
-            ba_opp_update = self.dba_opp
+            if self.bidirectional:
+                Wa_opp_update = self.dWa_opp
+                ba_opp_update = self.dba_opp
 
         self.Waa_right -= learning_rate * Wa_right_update[:self.n_a,:]
         self.Wax_right -= learning_rate * Wa_right_update[self.n_a:,:]
         self.ba_right -= learning_rate * ba_right_update
-        self.Waa_opp -= learning_rate * Wa_opp_update[:self.n_a,:]
-        self.Wax_opp -= learning_rate * Wa_opp_update[self.n_a:,:]
-        self.ba_opp -= learning_rate * ba_opp_update
+        if self.bidirectional:
+            self.Waa_opp -= learning_rate * Wa_opp_update[:self.n_a,:]
+            self.Wax_opp -= learning_rate * Wa_opp_update[self.n_a:,:]
+            self.ba_opp -= learning_rate * ba_opp_update
 
     def get_regularization_penalty(self, m):
         if self.regularizer == "l1":
@@ -299,4 +322,6 @@ class Simple_RNN():
             pen = (self.lambd / (2 * m)) * np.sum(np.square(self.Wa_right))
             if self.bidirectional:
                 pen += (self.lambd / (2 * m)) * np.sum(np.square(self.Wa_opp))
+        else:
+            pen = 0.0
         return pen

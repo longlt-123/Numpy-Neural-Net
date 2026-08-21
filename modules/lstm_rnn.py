@@ -2,12 +2,12 @@ import numpy as np
 
 from functions.activations import relu, linear, sigmoid, leaky_relu
 from functions.output import softmax
-from functions.utilities import initialize_parameters, forward_propagation, backward_propagation, initialize_optimizer
+from functions.utilities import initialize_parameters, initialize_optimizer
 from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
-from base import Layer
+from modules.base import Layer
 
 class LSTM():
     def __init__(self, hidden_state_dim, init_type = "he", activation = "softmax", bidirectional = False, regularizer = None, lambd = 0.01, freeze = False):
@@ -57,7 +57,7 @@ class LSTM():
         self.init_type = init_type
         self.bidirectional = bidirectional
         self.activation = activation
-        self.regularization = regularizer
+        self.regularizer = regularizer
         self.lambd = lambd
         self.freeze = freeze
 

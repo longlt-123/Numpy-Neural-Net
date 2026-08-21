@@ -6,31 +6,33 @@ from modules.activation_layer import Activation
 from modules.dense_layer import Dense
 from modules.batchnorm import BatchNorm
 from modules.dropout import Dropout
+from modules.simple_rnn import Simple_RNN
 
-from neural_network.MLP.mlp_net import MLP
+from neural_network.RNN.rnn import RNN
 
 
 if __name__ == "__main__":
     X_train = np.array([
-        [0, 0],
-        [0, 1],
-        [1, 0],
-        [1, 1]
-    ])
+        [[1.0], [2.0], [3.0], [4.0]],
+        [[2.0], [1.0], [4.0], [3.0]],
+        [[3.0], [2.0], [1.0], [2.0]],
+        [[1.0], [3.0], [2.0], [1.0]],
+        [[4.0], [1.0], [2.0], [3.0]],
+    ], dtype=np.float64)
 
     Y_train = np.array([
-        [0],
-        [1],
-        [1],
-        [0]
-    ])
+        [[1.0], [3.0], [6.0], [10.0]],
+        [[2.0], [3.0], [7.0], [10.0]],
+        [[3.0], [5.0], [6.0], [8.0]],
+        [[1.0], [4.0], [6.0], [7.0]],
+        [[4.0], [5.0], [7.0], [10.0]],
+    ], dtype=np.float64)
 
-    nn = MLP(input_dim=X_train.shape)
+    nn = RNN(input_dim=X_train.shape)
 
-    nn.add(Dense(number_neurons=4, activation="linear", init_type="random", regularizer=None, freeze=False))
-    nn.add(Activation(activation="sigmoid"))
+    nn.add(Simple_RNN(hidden_state_dim=8, init_type="he", bidirectional = False, regularizer=None, lambd=0.01, freeze=False))
     nn.add(Dense(number_neurons=1, activation="linear", init_type="random", regularizer=None, freeze=False))
-    nn.add(Activation(activation="sigmoid"))
+    nn.add(Activation(activation="linear"))
 
     training_set = (X_train, Y_train)
 
@@ -38,7 +40,7 @@ if __name__ == "__main__":
         training_set=training_set,
         validation_set=None,
         num_epochs=10000, 
-        cost_function="binary_cross_entropy",
+        cost_function="mse",
         optimizer="adam",
         learning_rate=0.006,
         mini_batch_size=4,
@@ -47,13 +49,10 @@ if __name__ == "__main__":
 
     predictions = nn.predict(X_train)
 
-    for i in range(len(X_train)):
-        prob = predictions[i][0]
-
-        pred_label = 1 if prob >= 0.5 else 0
-        true_label = Y_train[i][0]
-        
-        print(f"Đầu vào X: {X_train[i]} | Dự đoán: {prob:.4f} -> {pred_label} | Thực tế: {true_label}")
+    for i in range(X_train.shape[0]):
+        pred = predictions[i]
+        true_label = Y_train[i]
+        print(f"Đầu vào X: {X_train[i].flatten()} -> Dự đoán: {pred.flatten()} | Thực tế: {true_label.flatten()}")
 
     epochs = range(1, len(training_costs) + 1)
 
@@ -65,7 +64,7 @@ if __name__ == "__main__":
 
     plt.title('Biểu đồ biểu diễn Loss qua từng Epoch', fontsize=16, fontweight='bold')
     plt.xlabel('Epochs', fontsize=12)
-    plt.ylabel('Loss (Binary Cross Entropy)', fontsize=12)
+    plt.ylabel('Loss (MSE)', fontsize=12)
 
     plt.legend(fontsize=12)
     plt.grid(True, linestyle=':', alpha=0.7)

@@ -91,16 +91,25 @@ def initialize_optimizer(W, b, optimizer="adam"):
 
     if optimizer == "gd":
         return {}, {}
+
     elif optimizer == "rmsprop":
         s["dW"] = np.zeros_like(W)
         s["db"] = np.zeros_like(b)
+        return {}, s
+
     elif optimizer == "momentum":
         v["dW"] = np.zeros_like(W)
         v["db"] = np.zeros_like(b)
+        return v, {}
+
     elif optimizer == "adam":
         v["dW"] = np.zeros_like(W)
         v["db"] = np.zeros_like(b)
+
         s["dW"] = np.zeros_like(W)
         s["db"] = np.zeros_like(b)
 
-    return v, s
+        return v, s
+
+    else:
+        raise ValueError(f"Unsupported optimizer: {optimizer}")
