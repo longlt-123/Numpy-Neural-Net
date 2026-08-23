@@ -68,7 +68,7 @@ class BatchNorm(Layer):
         
         return dA_prev
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
         if self.freeze:
             return
 
@@ -84,6 +84,10 @@ class BatchNorm(Layer):
         else:
             gamma_update = self.d_gamma
             beta_update = self.d_beta
+        
+        if maxValue or minValue is not None:
+            gamma_update = np.clip(gamma_update, minValue, maxValue)
+            beta_update = np.clip(beta_update, minValue, maxValue)
         
         self.gamma -= learning_rate * gamma_update
         self.beta -= learning_rate * beta_update

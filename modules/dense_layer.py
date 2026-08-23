@@ -108,7 +108,7 @@ class Dense(Layer):
 
         return self.dA_prev
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
         if self.freeze:
             return
 
@@ -124,6 +124,10 @@ class Dense(Layer):
         else:
             W_update = self.dW
             b_update = self.db
+        
+        if maxValue or minValue is not None:
+            W_update = np.clip(W_update, minValue, maxValue)
+            b_update = np.clip(b_update, minValue, maxValue)
         
         self.W -= learning_rate * W_update
         self.b -= learning_rate * b_update

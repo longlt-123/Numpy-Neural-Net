@@ -38,6 +38,5 @@ class Activation(Layer):
             # Lấy ma trận Jacobian 3D, kích thước (m, c, c)
             jacobian = softmax(self.activation_cache, derivative=True)
             # Nhân chập: dA_prev[i, k] = tổng_j(dA[i, j] * jacobian[i, j, k])
-            dA_prev = np.einsum('ijk,ij->ik', jacobian, dA, optimize=True)
-
+            dA_prev = np.einsum('...jk,...j->...k', jacobian, dA, optimize=True)
         return dA_prev

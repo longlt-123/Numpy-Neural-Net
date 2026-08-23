@@ -19,7 +19,7 @@ class Layer(ABC):
     def init_optimizer(self, optimizer=None):
         pass
 
-    def update_parameters(self, learning_rate=0.01, optimizer=None):
+    def update_parameters(self, learning_rate=0.01, optimizer=None, maxValue=None, minValue=None):
         pass
 
     def get_regularization_penalty(self, m):

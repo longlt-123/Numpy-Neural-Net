@@ -44,6 +44,7 @@ class Simple_RNN():
         self.dWa_right = None
         self.dWa_opp = None
 
+        self.a_state = None
         self.a_right_caches = []
         self.a_prev_right_caches = []
         self.a_opp_caches = []
@@ -72,8 +73,6 @@ class Simple_RNN():
         print("optimizer =", optimizer)
         print("Wa_right =", self.Wa_right.shape)
         print("ba_right =", self.ba_right.shape)
-        print("v_right =", self.v_right)
-        print("s_right =", self.s_right)
 
         if self.bidirectional:
             self.Wa_opp = np.concatenate((self.Waa_opp, self.Wax_opp), axis=0)
@@ -93,21 +92,6 @@ class Simple_RNN():
             self.Waa_opp = initialize_parameters(self.n_a, self.n_a, self.init_type)
             self.Wax_opp = initialize_parameters(self.n_x, self.n_a, self.init_type)
             self.ba_opp = initialize_parameters(1, self.n_a, self.init_type)
-
-
-    def init_caches(self, input):
-        self.batch_size = input.shape[0]
-        self.n_x = input.shape[2]
-        self.T_x = input.shape[1]
-        self.T_y = self.T_x
-
-        self.a_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
-        self.a_prev_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
-        self.xt_caches = np.zeros((self.batch_size, self.T_x, self.n_x))
-
-        if self.bidirectional:
-            self.a_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
-            self.a_prev_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
 
     def rnn_cell_forward(self, xt, a_prev, bidirectional = False):
         if bidirectional == False:
@@ -129,7 +113,11 @@ class Simple_RNN():
         self.a_prev_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.xt_caches = np.zeros((self.batch_size, self.T_x, self.n_x))
 
-        a_right = np.zeros((self.batch_size, self.n_a))
+        if training == False and self.a_state is not None:
+            a_right = self.a_state
+        else:
+            a_right = np.zeros((self.batch_size, self.n_a))
+        
         for t in range(self.T_x):
             xt = self.x[:,t,:]
             self.xt_caches[:,t,:] = xt
@@ -149,7 +137,10 @@ class Simple_RNN():
                 a_opp = self.rnn_cell_forward(xt, a_opp, bidirectional=True)
                 self.a_opp_caches[:,t,:] = a_opp
 
-        A = self.compute_hidden_state_for_next_layer()
+        if training == False:
+            self.a_state = a_right
+
+        A = self.compute_hidden_state_for_next_layer(training=training)
 
         return A
 
@@ -262,8 +253,8 @@ class Simple_RNN():
         return self.dxt_caches
 
 
-    def compute_hidden_state_for_next_layer(self):
-        if self.bidirectional:
+    def compute_hidden_state_for_next_layer(self, training=True):
+        if self.bidirectional and training == True:
             if self.merge_mode == "concat":
                 return np.concatenate((self.a_right_caches, self.a_opp_caches), axis=-1)
             elif self.merge_mode == "sum":
@@ -275,7 +266,7 @@ class Simple_RNN():
         else:
             return self.a_right_caches
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
         if self.freeze:
             return
         
@@ -304,7 +295,14 @@ class Simple_RNN():
             if self.bidirectional:
                 Wa_opp_update = self.dWa_opp
                 ba_opp_update = self.dba_opp
-
+        
+        if maxValue or minValue is not None:
+            Wa_right_update = np.clip(Wa_right_update, minValue, maxValue)
+            ba_right_update = np.clip(ba_right_update, minValue, maxValue)
+            if self.bidirectional:
+                Wa_opp_update = np.clip(Wa_opp_update, minValue, maxValue)
+                ba_opp_update = np.clip(ba_opp_update, minValue, maxValue)
+        
         self.Waa_right -= learning_rate * Wa_right_update[:self.n_a,:]
         self.Wax_right -= learning_rate * Wa_right_update[self.n_a:,:]
         self.ba_right -= learning_rate * ba_right_update
