@@ -9,7 +9,7 @@ from functions.activations import relu, linear, sigmoid
 from functions.output import softmax
 from functions.loss import mean_square_error, categorical_cross_entropy, binary_cross_entropy
 from functions.score import accuracy_score, precision_score, recall_score, f1_score
-from functions.utilities import random_mini_batch, convert_targets, initialize_parameters, initialize_optimizer, shuffle_data
+from functions.utilities import prepare_sequence_data, random_mini_batch, convert_targets, initialize_parameters, initialize_optimizer, shuffle_data
 
 from modules.base import Layer
 from modules.activation_layer import Activation
@@ -182,3 +182,47 @@ class RNN:
     def predict(self, X_test):
         AL, _ = self.forward(X_test, training = False)
         return AL
+
+    def sampling(self, char_to_idx, idx_to_char, seed = 0, temperature = 1.0, max_length = 100):
+        np.random.seed(seed)
+        
+        vocab_size = len(char_to_idx)
+        START_IDX = vocab_size
+        END_IDX = vocab_size + 1
+        PAD_IDX = vocab_size + 2
+        UNKNOWN_IDX = vocab_size + 3
+        num_classes = vocab_size + 4
+
+        for layer in self.layers:
+            if hasattr(layer, 'a_state'):
+                layer.a_state = None
+            if hasattr(layer, 'c_state'):
+                layer.c_state = None
+
+        current_idx = START_IDX
+        sampled_indices = []
+
+        for _ in range(max_length):
+            x = np.zeros((1, 1, num_classes))
+            x[0, 0, current_idx] = 1
+
+            A = x
+            for i, layer in enumerate(self.layers):
+                if i == len(self.layers) - 1 and isinstance(layer, Activation):
+                    continue
+                
+                A = layer.forward(A, training=False)
+            raw_logits = A[0, 0, :]
+            scaled_logits = raw_logits / temperature
+
+            probabilities = softmax(scaled_logits).flatten()
+            next_idx = np.random.choice(range(num_classes), p=probabilities)
+
+            if next_idx == END_IDX:
+                break
+                
+            sampled_indices.append(next_idx)
+            current_idx = next_idx
+
+        sampled_text = ''.join(idx_to_char[i] for i in sampled_indices if i < vocab_size)
+        return sampled_text
