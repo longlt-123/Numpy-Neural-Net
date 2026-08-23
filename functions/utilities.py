@@ -7,7 +7,10 @@ def shuffle_data(X, Y):
     m = X.shape[0]
     permutation = np.random.permutation(m)
     shuffle_X = X[permutation, :]
-    shuffle_Y = Y[permutation, :]
+    if Y is not None:
+        shuffle_Y = Y[permutation, :]
+    else:
+        shuffle_Y = None
 
     return shuffle_X, shuffle_Y
 
@@ -34,6 +37,59 @@ def random_mini_batch(X, Y, mini_batch_size = 64, seed = 0):
             mini_batches.append(mini_batch)
 
         return mini_batches
+
+import numpy as np
+
+def prepare_sequence_data(words, char_to_idx, max_len=None):
+    """
+    Chuyển đổi danh sách các từ thành ma trận đầu vào X, Y dạng one-hot kèm mask.
+    """
+    vocab_size = len(char_to_idx)
+    
+    START_IDX = vocab_size
+    END_IDX = vocab_size + 1
+    PAD_IDX = vocab_size + 2
+    UNKNOWN_IDX = vocab_size + 3
+    num_classes = vocab_size + 4
+
+    if max_len is None:
+        max_len = max(len(w) for w in words) + 1
+        
+    m = len(words)
+    
+    X_idx = np.full((m, max_len), PAD_IDX, dtype=int)
+    Y_idx = np.full((m, max_len), PAD_IDX, dtype=int)
+    mask = np.zeros((m, max_len), dtype=int)
+    
+    for i, word in enumerate(words):
+        chars = [char_to_idx[c] for c in word if c in char_to_idx]
+        unknown_chars = [UNKNOWN_IDX for c in word if c not in char_to_idx]
+        if unknown_chars:
+            chars += unknown_chars
+
+        x_seq = [START_IDX] + chars
+        y_seq = chars + [END_IDX]
+        
+        x_seq = x_seq[:max_len]
+        y_seq = y_seq[:max_len]
+        
+        length = len(x_seq)
+        X_idx[i, :length] = x_seq
+        Y_idx[i, :length] = y_seq
+
+        mask[i, :length] = 1
+    X_onehot = np.zeros((m, max_len, num_classes))
+    Y_onehot = np.zeros((m, max_len, num_classes))
+    mask_3d = mask[:, :, np.newaxis]
+    
+    for i in range(m):
+        for t in range(max_len):
+            X_onehot[i, t, X_idx[i, t]] = 1
+            Y_onehot[i, t, Y_idx[i, t]] = 1
+
+    Y_onehot = Y_onehot * mask_3d
+
+    return X_onehot, Y_onehot, mask, max_len
 
 def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
     if to is None:
