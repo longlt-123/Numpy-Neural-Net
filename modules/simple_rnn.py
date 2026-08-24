@@ -7,7 +7,9 @@ from optimizers.adam import adam
 from optimizers.RMSprop import rmsprop
 from optimizers.momentum import momentum
 
-class Simple_RNN():
+from modules.base import Layer
+
+class Simple_RNN(Layer):
     def __init__(self, hidden_state_dim, init_type = "he", bidirectional = False, merge_mode = "concat", regularizer = None, lambd = 0.01, freeze = False):
         self.x =  None
         self.batch_size = None
@@ -20,24 +22,18 @@ class Simple_RNN():
         self.Wax_right = None
         self.Waa_right = None
         self.ba_right = None
-        self.Wya_right = None
-        self.by = None
 
         self.Wax_opp = None
         self.Waa_opp = None
         self.ba_opp = None
-        self.Wya_opp = None
 
         self.dWax_right = None
         self.dWaa_right = None
         self.dba_right = None
-        self.dWya_right = None
-        self.dby = None
 
         self.dWax_opp = None
         self.dWaa_opp = None
         self.dba_opp = None
-        self.dWya_opp = None
 
         self.Wa_right = None
         self.Wa_opp = None
@@ -191,7 +187,6 @@ class Simple_RNN():
             self.dWaa_opp = np.zeros_like(self.Waa_opp)
             self.dWax_opp = np.zeros_like(self.Wax_opp)
             self.dba_opp = np.zeros_like(self.ba_opp)
-            self.dWya_opp = np.zeros_like(self.Wya_opp)
 
         da_prevt_right = np.zeros((self.batch_size, self.n_a))
         da_prevt_opp = np.zeros((self.batch_size, self.n_a))
@@ -247,8 +242,6 @@ class Simple_RNN():
             "dWaa": self.dWaa_right,
             "dWax": self.dWax_right,
             "dba": self.dba_right,
-            "dWya": self.dWya_right,
-            "dby": self.dby,
         }
         return self.dxt_caches
 
