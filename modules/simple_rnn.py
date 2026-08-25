@@ -136,7 +136,7 @@ class Simple_RNN(Layer):
         if training == False:
             self.a_state = a_right
 
-        A = self.compute_hidden_state_for_next_layer(training=training)
+        A = self.compute_hidden_state_for_next_layer()
 
         return A
 
@@ -246,8 +246,8 @@ class Simple_RNN(Layer):
         return self.dxt_caches
 
 
-    def compute_hidden_state_for_next_layer(self, training=True):
-        if self.bidirectional and training == True:
+    def compute_hidden_state_for_next_layer(self):
+        if self.bidirectional:
             if self.merge_mode == "concat":
                 return np.concatenate((self.a_right_caches, self.a_opp_caches), axis=-1)
             elif self.merge_mode == "sum":

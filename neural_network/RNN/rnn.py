@@ -30,6 +30,7 @@ class RNN:
         self.cost_func = None
         self.regularize_penalty = 0
         self.input_dim = input_dim
+        self.can_sampling = True
 
         if isinstance(input_dim, tuple):
             self.current_layer_neurons = input_dim[-1]
@@ -46,7 +47,12 @@ class RNN:
         else:
             layer.init_params(self.current_layer_neurons)
             if isinstance(layer, Simple_RNN) or isinstance(layer, LSTM):
-                self.current_layer_neurons = layer.n_a
+                if layer.bidirectional == True:
+                    if layer.merge_mode == "concat":
+                        self.current_layer_neurons = layer.n_a * 2
+                    self.can_sampling = False
+                else:
+                    self.current_layer_neurons = layer.n_a
             else:
                 self.current_layer_neurons = layer.number_neurons
         self.layers.append(layer)
@@ -184,6 +190,9 @@ class RNN:
         return AL
 
     def sampling(self, char_to_idx, idx_to_char, seed = 0, temperature = 1.0, max_length = 100):
+        if self.can_sampling == False:
+            raise ValueError("Model has bidirectional layer so can not sampling")
+        
         np.random.seed(seed)
         
         vocab_size = len(char_to_idx)

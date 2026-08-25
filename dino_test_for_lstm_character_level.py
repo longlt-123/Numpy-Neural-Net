@@ -25,7 +25,8 @@ num_classes = len(char_to_idx) + 4
 
 
 model = RNN(input_dim=X_train.shape)
-model.add(LSTM(hidden_state_dim=64, bidirectional=False, init_type="he"))
+model.add(Dense(number_neurons=num_classes))
+model.add(LSTM(hidden_state_dim=64, bidirectional=True, init_type="he"))
 model.add(Dense(number_neurons=num_classes))
 model.add(Activation("softmax"))
 
