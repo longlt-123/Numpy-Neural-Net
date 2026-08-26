@@ -21,6 +21,8 @@ class MLP():
     def __init__(self, input_dim, layers: list[Layer] = None):
         self.layers: list = []
         self.optimizer = None
+        self.beta1 = None
+        self.beta2 = None
         self.learning_rate = 0
         self.cost_func = None
         self.regularize_penalty = 0
@@ -56,7 +58,7 @@ class MLP():
         for layer in reversed(self.layers):
             dA = dA_prev
             dA_prev = layer.backward(dA)
-            layer.update_parameters(self.learning_rate, self.optimizer)
+            layer.update_parameters(self.learning_rate, self.optimizer, self.beta1, self.beta2)
 
         return dA_prev
 
@@ -103,6 +105,8 @@ class MLP():
 
         self.cost_func = cost_function
         self.optimizer = optimizer
+        self.beta1 = beta1
+        self.beta2 = beta2
         self.learning_rate = learning_rate
 
         training_costs = []

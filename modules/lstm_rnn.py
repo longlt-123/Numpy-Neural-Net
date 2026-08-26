@@ -441,43 +441,43 @@ class LSTM(Layer):
         }
         return self.dxt_caches
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, beta1 = 0.9, beta2 = 0.99, maxValue = None, minValue = None):
             if self.freeze:
                 return
 
             if optimizer == "rmsprop":
                 self.t += 1
-                Wc_right_update, bc_right_update, self.Sc_right = rmsprop(self.dWc_right, self.dbc_right, self.Sc_right, self.t)
-                Wf_right_update, bf_right_update, self.Sf_right = rmsprop(self.dWf_right, self.dbf_right, self.Sf_right, self.t)
-                Wi_right_update, bi_right_update, self.Si_right = rmsprop(self.dWi_right, self.dbi_right, self.Si_right, self.t)
-                Wo_right_update, bo_right_update, self.So_right = rmsprop(self.dWo_right, self.dbo_right, self.So_right, self.t)
+                Wc_right_update, bc_right_update, self.Sc_right = rmsprop(self.dWc_right, self.dbc_right, self.Sc_right, self.t, beta1)
+                Wf_right_update, bf_right_update, self.Sf_right = rmsprop(self.dWf_right, self.dbf_right, self.Sf_right, self.t, beta1)
+                Wi_right_update, bi_right_update, self.Si_right = rmsprop(self.dWi_right, self.dbi_right, self.Si_right, self.t, beta1)
+                Wo_right_update, bo_right_update, self.So_right = rmsprop(self.dWo_right, self.dbo_right, self.So_right, self.t, beta1)
                 if self.bidirectional:
-                    Wc_opp_update, bc_opp_update, self.Sc_opp = rmsprop(self.dWc_opp, self.dbc_opp, self.Sc_opp, self.t)
-                    Wf_opp_update, bf_opp_update, self.Sf_opp = rmsprop(self.dWf_opp, self.dbf_opp, self.Sf_opp, self.t)
-                    Wi_opp_update, bi_opp_update, self.Si_opp = rmsprop(self.dWi_opp, self.dbi_opp, self.Si_opp, self.t)
-                    Wo_opp_update, bo_opp_update, self.So_opp = rmsprop(self.dWo_opp, self.dbo_opp, self.So_opp, self.t)
+                    Wc_opp_update, bc_opp_update, self.Sc_opp = rmsprop(self.dWc_opp, self.dbc_opp, self.Sc_opp, self.t, beta1)
+                    Wf_opp_update, bf_opp_update, self.Sf_opp = rmsprop(self.dWf_opp, self.dbf_opp, self.Sf_opp, self.t, beta1)
+                    Wi_opp_update, bi_opp_update, self.Si_opp = rmsprop(self.dWi_opp, self.dbi_opp, self.Si_opp, self.t, beta1)
+                    Wo_opp_update, bo_opp_update, self.So_opp = rmsprop(self.dWo_opp, self.dbo_opp, self.So_opp, self.t, beta1)
             elif optimizer == "momentum":
                 self.t += 1
-                Wc_right_update, bc_right_update, self.Sc_right = momentum(self.dWc_right, self.dbc_right, self.Sc_right, self.t)
-                Wf_right_update, bf_right_update, self.Sf_right = momentum(self.dWf_right, self.dbf_right, self.Sf_right, self.t)
-                Wi_right_update, bi_right_update, self.Si_right = momentum(self.dWi_right, self.dbi_right, self.Si_right, self.t)
-                Wo_right_update, bo_right_update, self.So_right = momentum(self.dWo_right, self.dbo_right, self.So_right, self.t)
+                Wc_right_update, bc_right_update, self.Sc_right = momentum(self.dWc_right, self.dbc_right, self.Sc_right, self.t, beta1)
+                Wf_right_update, bf_right_update, self.Sf_right = momentum(self.dWf_right, self.dbf_right, self.Sf_right, self.t, beta1)
+                Wi_right_update, bi_right_update, self.Si_right = momentum(self.dWi_right, self.dbi_right, self.Si_right, self.t, beta1)
+                Wo_right_update, bo_right_update, self.So_right = momentum(self.dWo_right, self.dbo_right, self.So_right, self.t, beta1)
                 if self.bidirectional:
-                    Wc_opp_update, bc_opp_update, self.Sc_opp = momentum(self.dWc_opp, self.dbc_opp, self.Sc_opp, self.t)
-                    Wf_opp_update, bf_opp_update, self.Sf_opp = momentum(self.dWf_opp, self.dbf_opp, self.Sf_opp, self.t)
-                    Wi_opp_update, bi_opp_update, self.Si_opp = momentum(self.dWi_opp, self.dbi_opp, self.Si_opp, self.t)
-                    Wo_opp_update, bo_opp_update, self.So_opp = momentum(self.dWo_opp, self.dbo_opp, self.So_opp, self.t)
+                    Wc_opp_update, bc_opp_update, self.Sc_opp = momentum(self.dWc_opp, self.dbc_opp, self.Sc_opp, self.t, beta1)
+                    Wf_opp_update, bf_opp_update, self.Sf_opp = momentum(self.dWf_opp, self.dbf_opp, self.Sf_opp, self.t, beta1)
+                    Wi_opp_update, bi_opp_update, self.Si_opp = momentum(self.dWi_opp, self.dbi_opp, self.Si_opp, self.t, beta1)
+                    Wo_opp_update, bo_opp_update, self.So_opp = momentum(self.dWo_opp, self.dbo_opp, self.So_opp, self.t, beta1)
             elif optimizer == "adam":
                 self.t += 1
-                Wc_right_update, bc_right_update, self.Vc_right, self.Sc_right, _, _ = adam(self.dWc_right, self.dbc_right, self.Vc_right, self.Sc_right, self.t)
-                Wf_right_update, bf_right_update, self.Vf_right, self.Sf_right, _, _ = adam(self.dWf_right, self.dbf_right, self.Vf_right, self.Sf_right, self.t)
-                Wi_right_update, bi_right_update, self.Vi_right, self.Si_right, _, _ = adam(self.dWi_right, self.dbi_right, self.Vi_right, self.Si_right, self.t)
-                Wo_right_update, bo_right_update, self.Vo_right, self.So_right, _, _ = adam(self.dWo_right, self.dbo_right, self.Vo_right, self.So_right, self.t)
+                Wc_right_update, bc_right_update, self.Vc_right, self.Sc_right, _, _ = adam(self.dWc_right, self.dbc_right, self.Vc_right, self.Sc_right, self.t, beta1, beta2)
+                Wf_right_update, bf_right_update, self.Vf_right, self.Sf_right, _, _ = adam(self.dWf_right, self.dbf_right, self.Vf_right, self.Sf_right, self.t, beta1, beta2)
+                Wi_right_update, bi_right_update, self.Vi_right, self.Si_right, _, _ = adam(self.dWi_right, self.dbi_right, self.Vi_right, self.Si_right, self.t, beta1, beta2)
+                Wo_right_update, bo_right_update, self.Vo_right, self.So_right, _, _ = adam(self.dWo_right, self.dbo_right, self.Vo_right, self.So_right, self.t, beta1, beta2)
                 if self.bidirectional:
-                    Wc_opp_update, bc_opp_update, self.Vc_opp, self.Sc_opp, _, _ = adam(self.dWc_opp, self.dbc_opp, self.Vc_opp, self.Sc_opp, self.t)
-                    Wf_opp_update, bf_opp_update, self.Vf_opp, self.Sf_opp, _, _ = adam(self.dWf_opp, self.dbf_opp, self.Vf_opp, self.Sf_opp, self.t)
-                    Wi_opp_update, bi_opp_update, self.Vi_opp, self.Si_opp, _, _ = adam(self.dWi_opp, self.dbi_opp, self.Vi_opp, self.Si_opp, self.t)
-                    Wo_opp_update, bo_opp_update, self.Vo_opp, self.So_opp, _, _ = adam(self.dWo_opp, self.dbo_opp, self.Vo_opp, self.So_opp, self.t)
+                    Wc_opp_update, bc_opp_update, self.Vc_opp, self.Sc_opp, _, _ = adam(self.dWc_opp, self.dbc_opp, self.Vc_opp, self.Sc_opp, self.t, beta1, beta2)
+                    Wf_opp_update, bf_opp_update, self.Vf_opp, self.Sf_opp, _, _ = adam(self.dWf_opp, self.dbf_opp, self.Vf_opp, self.Sf_opp, self.t, beta1, beta2)
+                    Wi_opp_update, bi_opp_update, self.Vi_opp, self.Si_opp, _, _ = adam(self.dWi_opp, self.dbi_opp, self.Vi_opp, self.Si_opp, self.t, beta1, beta2)
+                    Wo_opp_update, bo_opp_update, self.Vo_opp, self.So_opp, _, _ = adam(self.dWo_opp, self.dbo_opp, self.Vo_opp, self.So_opp, self.t, beta1, beta2)
             else:
                 Wc_right_update = self.dWc_right
                 Wf_right_update = self.dWf_right

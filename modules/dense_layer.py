@@ -108,19 +108,19 @@ class Dense(Layer):
 
         return self.dA_prev
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, beta1 = 0.9, beta2 = 0.99, maxValue = None, minValue = None):
         if self.freeze:
             return
 
         if optimizer == "rmsprop":
             self.t += 1
-            W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t)
+            W_update, b_update, self.s = rmsprop(self.dW, self.db, self.s, self.t, beta1)
         elif optimizer == "momentum":
             self.t += 1
-            W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t)
+            W_update, b_update, self.v = momentum(self.dW, self.db, self.v, self.t, beta1)
         elif optimizer == "adam":
             self.t += 1
-            W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t)
+            W_update, b_update, self.v, self.s, _, _ = adam(self.dW, self.db, self.v, self.s, self.t, beta1, beta2)
         else:
             W_update = self.dW
             b_update = self.db

@@ -259,7 +259,7 @@ class Simple_RNN(Layer):
         else:
             return self.a_right_caches
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, beta1 = 0.9, beta2 = 0.99, maxValue = None, minValue = None):
         if self.freeze:
             return
         
@@ -269,19 +269,19 @@ class Simple_RNN(Layer):
 
         if optimizer == "rmsprop":
             self.t += 1
-            Wa_right_update, ba_right_update, self.s_right = rmsprop(self.dWa_right, self.dba_right, self.s_right, self.t)
+            Wa_right_update, ba_right_update, self.s_right = rmsprop(self.dWa_right, self.dba_right, self.s_right, self.t, beta1)
             if self.bidirectional:
-                Wa_opp_update, ba_opp_update, self.s_opp = rmsprop(self.dWa_opp, self.dba_opp, self.s_opp, self.t)
+                Wa_opp_update, ba_opp_update, self.s_opp = rmsprop(self.dWa_opp, self.dba_opp, self.s_opp, self.t, beta1)
         elif optimizer == "momentum":
             self.t += 1
-            Wa_right_update, ba_right_update, self.v_right = momentum(self.dWa_right, self.dba_right, self.v_right, self.t)
+            Wa_right_update, ba_right_update, self.v_right = momentum(self.dWa_right, self.dba_right, self.v_right, self.t, beta1)
             if self.bidirectional:
-                Wa_opp_update, ba_opp_update, self.v_opp = momentum(self.dWa_opp, self.dba_opp, self.v_opp, self.t)
+                Wa_opp_update, ba_opp_update, self.v_opp = momentum(self.dWa_opp, self.dba_opp, self.v_opp, self.t, beta1)
         elif optimizer == "adam":
             self.t += 1
-            Wa_right_update, ba_right_update, self.v_right, self.s_right, _, _ = adam(self.dWa_right, self.dba_right, self.v_right, self.s_right, self.t)
+            Wa_right_update, ba_right_update, self.v_right, self.s_right, _, _ = adam(self.dWa_right, self.dba_right, self.v_right, self.s_right, self.t, beta1, beta2)
             if self.bidirectional:
-                Wa_opp_update, ba_opp_update, self.v_opp, self.s_opp, _, _ = adam(self.dWa_opp, self.dba_opp, self.v_opp, self.s_opp, self.t)
+                Wa_opp_update, ba_opp_update, self.v_opp, self.s_opp, _, _ = adam(self.dWa_opp, self.dba_opp, self.v_opp, self.s_opp, self.t, beta1, beta2)
         else:
             Wa_right_update = self.dWa_right
             ba_right_update = self.dba_right

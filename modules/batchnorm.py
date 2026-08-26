@@ -68,19 +68,19 @@ class BatchNorm(Layer):
         
         return dA_prev
 
-    def update_parameters(self, learning_rate = 0.01, optimizer=None, maxValue = None, minValue = None):
+    def update_parameters(self, learning_rate = 0.01, optimizer=None, beta1 = 0.9, beta2 = 0.99, maxValue = None, minValue = None):
         if self.freeze:
             return
 
         if optimizer == "rmsprop":
             self.t += 1
-            gamma_update, beta_update, self.s = rmsprop(self.d_gamma, self.d_beta, self.s, self.t)
+            gamma_update, beta_update, self.s = rmsprop(self.d_gamma, self.d_beta, self.s, self.t, beta1)
         elif optimizer == "momentum":
             self.t += 1
-            gamma_update, beta_update, self.v = momentum(self.d_gamma, self.d_beta, self.v, self.t)
+            gamma_update, beta_update, self.v = momentum(self.d_gamma, self.d_beta, self.v, self.t, beta1)
         elif optimizer == "adam":
             self.t += 1
-            gamma_update, beta_update, self.v, self.s, _, _ = adam(self.d_gamma, self.d_beta, self.v, self.s, self.t)
+            gamma_update, beta_update, self.v, self.s, _, _ = adam(self.d_gamma, self.d_beta, self.v, self.s, self.t, beta1, beta2)
         else:
             gamma_update = self.d_gamma
             beta_update = self.d_beta
