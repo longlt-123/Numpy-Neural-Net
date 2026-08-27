@@ -13,6 +13,12 @@ class Layer(ABC):
     def backward(self, dA):
         pass
 
+    def set_weights(self, weights):
+        pass
+
+    def get_weights(self):
+        pass
+
     def init_params(self, previous_layer_neurons=None):
         pass
 

@@ -10,7 +10,7 @@ from optimizers.momentum import momentum
 from modules.base import Layer
 
 class LSTM(Layer):
-    def __init__(self, hidden_state_dim, init_type = "he", bidirectional = False, merge_mode = "concat", regularizer = None, lambd = 0.01, freeze = False):
+    def __init__(self, hidden_state_dim, init_type = "he", bidirectional = False, merge_mode = "concat", regularizer = None, lambd = 0.01, freeze = False, return_sequences=True):
         self.x =  None
         self.batch_size = None
         self.n_x = None
@@ -87,6 +87,7 @@ class LSTM(Layer):
         self.regularizer = regularizer
         self.lambd = lambd
         self.freeze = freeze
+        self.return_sequences = return_sequences
 
         self.Vf_right = None
         self.Vf_opp = None
@@ -247,17 +248,30 @@ class LSTM(Layer):
         return A
 
     def compute_hidden_state_for_next_layer(self):
-        if self.bidirectional:
-            if self.merge_mode == "concat":
-                return np.concatenate((self.a_right_caches, self.a_opp_caches), axis=-1)
-            elif self.merge_mode == "sum":
-                return self.a_right_caches + self.a_opp_caches
-            elif self.merge_mode == "average":
-                return (self.a_right_caches + self.a_opp_caches) / 2
-            elif self.merge_mode == "multiply":
-                return self.a_right_caches * self.a_opp_caches
+        if self.return_sequences:
+            if self.bidirectional:
+                if self.merge_mode == "concat":
+                    return np.concatenate((self.a_right_caches, self.a_opp_caches), axis=-1)
+                elif self.merge_mode == "sum":
+                    return self.a_right_caches + self.a_opp_caches
+                elif self.merge_mode == "average":
+                    return (self.a_right_caches + self.a_opp_caches) / 2
+                elif self.merge_mode == "multiply":
+                    return self.a_right_caches * self.a_opp_caches
+            else:
+                return self.a_right_caches
         else:
-            return self.a_right_caches
+            if self.bidirectional:
+                if self.merge_mode == "concat":
+                    return np.concatenate((self.a_right_caches[:, -1, :], self.a_opp_caches[:, 0, :]), axis=-1)
+                elif self.merge_mode == "sum":
+                    return self.a_right_caches[:, -1, :] + self.a_opp_caches[:, 0, :]
+                elif self.merge_mode == "average":
+                    return (self.a_right_caches[:, -1, :] + self.a_opp_caches[:, 0, :]) / 2
+                elif self.merge_mode == "multiply":
+                    return self.a_right_caches[:, -1, :] * self.a_opp_caches[:, 0, :]
+            else:
+                return self.a_right_caches[:, -1, :]
 
     def lstm_cell_backward(self, dA, xt, a_prev, dC, c_next, c_hat, c_prev, i_gate, f_gate, o_gate, bidirectional = False):
         do = dA * np.tanh(c_next) * o_gate * (1 - o_gate)
@@ -319,22 +333,43 @@ class LSTM(Layer):
         self.dWo_right = np.zeros_like(self.Wo_right)
         self.dbo_right = np.zeros_like(self.bo_right)
 
-        if self.bidirectional == False:
-            dA_right = dA
-            dA_opp = None
+        if self.return_sequences == False:
+            if self.bidirectional == False:
+                dA_right = np.zeros((self.batch_size, self.T_x, self.n_a))
+                dA_right[:, -1, :] = dA
+                dA_opp = None
+            else:
+                dA_right = np.zeros((self.batch_size, self.T_x, self.n_a))
+                dA_opp = np.zeros((self.batch_size, self.T_x, self.n_a))
+                if self.merge_mode == "concat":
+                    dA_right[:, -1, :] = dA[:, :self.n_a]
+                    dA_opp[:, 0, :] = dA[:, self.n_a:]
+                elif self.merge_mode == "sum":
+                    dA_right[:, -1, :] = dA
+                    dA_opp[:, 0, :] = dA
+                elif self.merge_mode == "average":
+                    dA_right[:, -1, :] = dA / 2
+                    dA_opp[:, 0, :] = dA / 2
+                elif self.merge_mode == "multiply":
+                    dA_right[:, -1, :] = dA * self.a_opp_caches[:, 0, :]
+                    dA_opp[:, 0, :] = dA * self.a_right_caches[:, -1, :]
         else:
-            if self.merge_mode == "concat":
-                dA_right = dA[:,:,:self.n_a]
-                dA_opp = dA[:,:,self.n_a:]
-            elif self.merge_mode == "sum":
+            if self.bidirectional == False:
                 dA_right = dA
-                dA_opp = dA
-            elif self.merge_mode == "average":
-                dA_right = dA / 2
-                dA_opp = dA / 2
-            elif self.merge_mode == "multiply":
-                dA_right = dA * self.a_opp_caches
-                dA_opp = dA * self.a_right_caches
+                dA_opp = None
+            else:
+                if self.merge_mode == "concat":
+                    dA_right = dA[:,:,:self.n_a]
+                    dA_opp = dA[:,:,self.n_a:]
+                elif self.merge_mode == "sum":
+                    dA_right = dA
+                    dA_opp = dA
+                elif self.merge_mode == "average":
+                    dA_right = dA / 2
+                    dA_opp = dA / 2
+                elif self.merge_mode == "multiply":
+                    dA_right = dA * self.a_opp_caches
+                    dA_opp = dA * self.a_right_caches
             
             self.dWf_opp = np.zeros_like(self.Wf_opp)
             self.dbf_opp = np.zeros_like(self.bf_opp)

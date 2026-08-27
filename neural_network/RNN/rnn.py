@@ -238,4 +238,4 @@ class RNN:
             current_idx = next_idx
 
         sampled_text = ''.join(idx_to_char[i] for i in sampled_indices if i < vocab_size)
-        return sampled_text
+        return sampled_text, sampled_indices
