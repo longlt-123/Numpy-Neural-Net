@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Bỏ qua thư mục chứa dữ liệu
+data/

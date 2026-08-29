@@ -8,7 +8,7 @@ from functions.utilities import prepare_sequence_data
 from modules.dense_layer import Dense 
 from modules.activation_layer import Activation 
 
-file_path = "dinos.txt"
+file_path = "data/dinos.txt"
 with open(file_path, "r", encoding="utf-8") as file:
     words = [line.strip().lower() + '\n' for line in file if line.strip()]
 
