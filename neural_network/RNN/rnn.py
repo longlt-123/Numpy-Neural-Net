@@ -16,6 +16,7 @@ from modules.activation_layer import Activation
 from modules.dense_layer import Dense
 from modules.batchnorm import BatchNorm
 from modules.dropout import Dropout
+from modules.embedding import Embedding
 
 from optimizers.adam import adam
 from optimizers.learning_rate_decay import decay_with_decay_rate, decay_with_stage
@@ -46,6 +47,10 @@ class RNN:
     def add(self, layer):
         if isinstance(layer, Activation) or isinstance(layer, Dropout):
             pass
+        elif isinstance(layer, Embedding):
+            if layer.E is None:
+                layer.init_params(self.current_layer_neurons)
+            self.current_layer_neurons = layer.embedding_dim
         else:
             layer.init_params(self.current_layer_neurons)
             if isinstance(layer, Simple_RNN) or isinstance(layer, LSTM):
