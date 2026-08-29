@@ -132,7 +132,7 @@ class LSTM(Layer):
         self.Wi_right = initialize_parameters(self.n_a + self.n_x, self.n_a, self.init_type)
         self.Wc_right = initialize_parameters(self.n_a + self.n_x, self.n_a, self.init_type)
         self.Wo_right = initialize_parameters(self.n_a + self.n_x, self.n_a, self.init_type)
-        self.bf_right = initialize_parameters(1, self.n_a, self.init_type)
+        self.bf_right = np.ones((1, self.n_a))
         self.bi_right = initialize_parameters(1, self.n_a, self.init_type)
         self.bc_right = initialize_parameters(1, self.n_a, self.init_type)
         self.bo_right = initialize_parameters(1, self.n_a, self.init_type)
@@ -142,7 +142,7 @@ class LSTM(Layer):
             self.Wi_opp = initialize_parameters(self.n_a + self.n_x, self.n_a, self.init_type)
             self.Wc_opp = initialize_parameters(self.n_a + self.n_x, self.n_a, self.init_type)
             self.Wo_opp = initialize_parameters(self.n_a + self.n_x, self.n_a, self.init_type)
-            self.bf_opp = initialize_parameters(1, self.n_a, self.init_type)
+            self.bf_opp = np.ones((1, self.n_a))
             self.bi_opp = initialize_parameters(1, self.n_a, self.init_type)
             self.bc_opp = initialize_parameters(1, self.n_a, self.init_type)
             self.bo_opp = initialize_parameters(1, self.n_a, self.init_type)
@@ -196,12 +196,12 @@ class LSTM(Layer):
         self.c_hat_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
 
         if training == False:
-            if self.a_state is not None:
+            if self.a_state is not None and self.a_state.shape[0] == self.batch_size:
                 a_right = self.a_state
             else:
                 a_right = np.zeros((self.batch_size, self.n_a))
             
-            if self.c_state is not None:
+            if self.c_state is not None and self.c_state.shape[0] == self.batch_size:
                 c_right = self.c_state
             else:
                 c_right = np.zeros((self.batch_size, self.n_a))

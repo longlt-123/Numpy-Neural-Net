@@ -10,9 +10,6 @@ class Dropout(Layer):
     def init_params(self, previous_layer_neurons):
         pass
 
-    def update_parameters(self):
-        pass
-
     def forward(self, A_prev, training = True):
         if training:
             random_matrix = np.random.rand(*A_prev.shape)

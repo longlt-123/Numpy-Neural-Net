@@ -110,7 +110,7 @@ class Simple_RNN(Layer):
         self.a_prev_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.xt_caches = np.zeros((self.batch_size, self.T_x, self.n_x))
 
-        if training == False and self.a_state is not None:
+        if training == False and self.a_state is not None and self.a_state.shape[0] == self.batch_size:
             a_right = self.a_state
         else:
             a_right = np.zeros((self.batch_size, self.n_a))
