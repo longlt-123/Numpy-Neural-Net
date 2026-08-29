@@ -3,7 +3,7 @@ from modules.base import Layer
 from functions.utilities import initialize_parameters, initialize_optimizer
 
 class embedding(Layer):
-    def __init__(self, embedding_dim, init_type = "he", input_type="idx", index_column = 0, freeze = True):
+    def __init__(self, embedding_dim, init_type = "he", input_type="idx", index_column = 0, transfer_weights = None, freeze = True):
         self.embedding_dim = embedding_dim
         self.init_type = init_type
         self.input_type = input_type
@@ -11,6 +11,8 @@ class embedding(Layer):
         self.freeze = freeze
         self.A_prev = None
         self.E = None
+        if transfer_weights is not None:
+            self.E = transfer_weights
         self.dE = None
 
     def init_params(self, vocab_size=None):
