@@ -9,3 +9,7 @@ __pycache__/
 
 # Bỏ qua thư mục chứa dữ liệu
 data/
+
+# Bỏ qua các file jupyter notebook
+*.ipynb
+*.ipynb_checkpoints/
