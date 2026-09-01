@@ -12,4 +12,5 @@ data/
 
 # Bỏ qua các file jupyter notebook
 *.ipynb
-*.ipynb_checkpoints/
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
