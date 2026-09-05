@@ -1,8 +1,13 @@
 import numpy as np
 import pandas as pd
-
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(current_dir)
+sys.path.append(root_dir)
 
 from neural_network.RNN.rnn import RNN
 from modules.lstm_rnn import LSTM

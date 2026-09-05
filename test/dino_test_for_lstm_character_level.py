@@ -1,5 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(current_dir)
+sys.path.append(root_dir)
 
 from neural_network.RNN.rnn import RNN
 from modules.lstm_rnn import LSTM
@@ -25,7 +31,8 @@ num_classes = len(char_to_idx) + 4
 
 
 model = RNN(input_dim=X_train.shape)
-model.add(Simple_RNN(hidden_state_dim=64, bidirectional=False, init_type="he"))
+model.add(Dense(number_neurons=num_classes))
+model.add(LSTM(hidden_state_dim=64, bidirectional=True, init_type="he"))
 model.add(Dense(number_neurons=num_classes))
 model.add(Activation("softmax"))
 
@@ -42,7 +49,7 @@ training_costs, validation_costs, _ = model.fit(
 
 print("\n\n--- TÊN KHỦNG LONG MỚI ĐƯỢC SINH RA ---")
 for i in range(10):
-    name, _ = model.sampling(char_to_idx, idx_to_char, seed=i, temperature=1.0, max_length=20)
+    name = model.sampling(char_to_idx, idx_to_char, seed=i, temperature=1.0, max_length=20)
     
     print(f"{i+1}. {name.capitalize()}")
 
