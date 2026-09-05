@@ -42,7 +42,7 @@ training_costs, validation_costs, _ = model.fit(
 
 print("\n\n--- TÊN KHỦNG LONG MỚI ĐƯỢC SINH RA ---")
 for i in range(10):
-    name = model.sampling(char_to_idx, idx_to_char, seed=i, temperature=1.0, max_length=20)
+    name, _ = model.sampling(char_to_idx, idx_to_char, seed=i, temperature=1.0, max_length=20)
     
     print(f"{i+1}. {name.capitalize()}")
 

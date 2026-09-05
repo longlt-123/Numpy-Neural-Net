@@ -195,6 +195,10 @@ class RNN:
         return training_costs, validation_costs, learning_rates
     
     def predict(self, X_test):
+        for layer in self.layers:
+            if hasattr(layer, 'reset_states'):
+                layer.reset_states()
+                
         AL, _ = self.forward(X_test, training = False)
         return AL
 

@@ -55,6 +55,13 @@ class LSTM(Layer):
 
         self.a_state = None
         self.c_state = None
+        self.a_state_opp = None
+        self.c_state_opp = None
+
+        self.da_0 = None 
+        self.dc_0 = None
+        self.da_0_opp = None
+        self.dc_0_opp = None
 
         self.a_right_caches = []
         self.a_prev_right_caches = []
@@ -147,6 +154,21 @@ class LSTM(Layer):
             self.bc_opp = initialize_parameters(1, self.n_a, self.init_type)
             self.bo_opp = initialize_parameters(1, self.n_a, self.init_type)
 
+    def set_states(self, a_state, c_state, a_state_opp=None, c_state_opp=None):
+        self.a_state = a_state
+        self.c_state = c_state
+        self.a_state_opp = a_state_opp
+        self.c_state_opp = c_state_opp
+
+    def get_initial_state_gradients(self):
+        return self.da_0, self.dc_0, self.da_0_opp, self.dc_0_opp
+
+    def reset_states(self):
+        self.a_state = None
+        self.c_state = None
+        self.a_state_opp = None
+        self.c_state_opp = None
+
     def lstm_cell_forward(self, xt, a_prev, c_prev, bidirectional = False):
         if bidirectional == False:
             f_gate = sigmoid(np.matmul(np.concatenate((a_prev, xt), axis=-1), self.Wf_right) + self.bf_right)
@@ -195,18 +217,14 @@ class LSTM(Layer):
         self.c_hat_right_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
         self.c_hat_opp_caches = np.zeros((self.batch_size, self.T_x, self.n_a))
 
-        if training == False:
-            if self.a_state is not None and self.a_state.shape[0] == self.batch_size:
-                a_right = self.a_state
-            else:
-                a_right = np.zeros((self.batch_size, self.n_a))
-            
-            if self.c_state is not None and self.c_state.shape[0] == self.batch_size:
-                c_right = self.c_state
-            else:
-                c_right = np.zeros((self.batch_size, self.n_a))
+        if self.a_state is not None and self.a_state.shape[0] == self.batch_size:
+            a_right = self.a_state
         else:
             a_right = np.zeros((self.batch_size, self.n_a))
+        
+        if self.c_state is not None and self.c_state.shape[0] == self.batch_size:
+            c_right = self.c_state
+        else:
             c_right = np.zeros((self.batch_size, self.n_a))
         
         for t in range(self.T_x):
@@ -224,8 +242,15 @@ class LSTM(Layer):
             self.o_right_caches[:,t,:] = o_gate_right
             self.c_hat_right_caches[:,t,:] = c_hat_right
         if self.bidirectional:
-            a_opp = np.zeros((self.batch_size, self.n_a))
-            c_opp = np.zeros((self.batch_size, self.n_a))
+            if self.a_state_opp is not None and self.a_state_opp.shape[0] == self.batch_size:
+                a_opp = self.a_state_opp
+            else:
+                a_opp = np.zeros((self.batch_size, self.n_a))
+            
+            if self.c_state_opp is not None and self.c_state_opp.shape[0] == self.batch_size:
+                c_opp = self.c_state_opp
+            else:
+                c_opp = np.zeros((self.batch_size, self.n_a))
 
             for t in reversed(range(self.T_x)):
                 xt = self.x[:,t,:]
@@ -243,6 +268,9 @@ class LSTM(Layer):
         if training == False:
             self.a_state = a_right
             self.c_state = c_right
+            if self.bidirectional:
+                self.a_state_opp = a_opp
+                self.c_state_opp = c_opp
 
         A = self.compute_hidden_state_for_next_layer()
         return A
@@ -411,6 +439,8 @@ class LSTM(Layer):
             self.dbi_right += dbi_right
             self.dbo_right += dbo_right
             self.dxt_caches[:,t,:] += dxt_right
+        self.da_0 = da_prevt_right
+        self.dc_0 = dc_prevt_right
 
         if self.bidirectional:
             for t in range(self.T_x):
@@ -439,6 +469,8 @@ class LSTM(Layer):
                 self.dbi_opp += dbi_opp
                 self.dbo_opp += dbo_opp
                 self.dxt_caches[:,t,:] += dxt_opp
+            self.da_0_opp = da_prevt_opp
+            self.dc_0_opp = dc_prevt_opp
 
         m = self.batch_size
         

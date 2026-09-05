@@ -41,6 +41,10 @@ class Simple_RNN(Layer):
         self.dWa_opp = None
 
         self.a_state = None
+        self.a_state_opp = None
+        self.da_0 = None
+        self.da_0_opp = None
+
         self.a_right_caches = []
         self.a_prev_right_caches = []
         self.a_opp_caches = []
@@ -90,6 +94,17 @@ class Simple_RNN(Layer):
             self.Wax_opp = initialize_parameters(self.n_x, self.n_a, self.init_type)
             self.ba_opp = initialize_parameters(1, self.n_a, self.init_type)
 
+    def set_states(self, a_state, a_state_opp=None):
+            self.a_state = a_state
+            self.a_state_opp = a_state_opp
+    
+    def get_initial_state_gradients(self):
+        return self.da_0, self.da_0_opp
+
+    def reset_states(self):
+        self.a_state = None
+        self.a_state_opp = None
+
     def rnn_cell_forward(self, xt, a_prev, bidirectional = False):
         if bidirectional == False:
             a_next = np.tanh(np.dot(xt, self.Wax_right) + np.dot(a_prev, self.Waa_right) + self.ba_right)
@@ -136,7 +151,7 @@ class Simple_RNN(Layer):
 
         if training == False:
             self.a_state = a_right
-
+            self.a_state_opp = a_opp if self.bidirectional else None
         A = self.compute_hidden_state_for_next_layer()
 
         return A
@@ -225,6 +240,7 @@ class Simple_RNN(Layer):
             self.dWaa_right += dWaa_right
             self.dba_right += dba_right
             self.dxt_caches[:,t,:] += dxt_right
+        self.da_0 = da_prevt_right
 
         if self.bidirectional:
             for t in range(self.T_x):
@@ -239,6 +255,7 @@ class Simple_RNN(Layer):
                 self.dWaa_opp += dWaa_opp
                 self.dba_opp += dba_opp
                 self.dxt_caches[:,t,:] += dxt_opp
+            self.da_0_opp = da_prevt_opp
 
         m = self.batch_size
         
