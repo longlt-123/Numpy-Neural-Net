@@ -163,6 +163,24 @@ class LSTM(Layer):
     def get_initial_state_gradients(self):
         return self.da_0, self.dc_0, self.da_0_opp, self.dc_0_opp
 
+    def get_last_states(self):
+        if self.bidirectional:
+            if self.merge_mode == "concat":
+                a_state = np.concatenate((self.a_right_caches[:, -1, :], self.a_opp_caches[:, 0, :]), axis=-1)
+                c_state = np.concatenate((self.c_right_caches[:, -1, :], self.c_opp_caches[:, 0, :]), axis=-1)
+                return a_state, c_state
+            elif self.merge_mode == "sum":
+                return self.a_right_caches[:, -1, :] + self.a_opp_caches[:, 0, :], self.c_right_caches[:, -1, :] + self.c_opp_caches[:, 0, :]
+            elif self.merge_mode == "average":
+                return (self.a_right_caches[:, -1, :] + self.a_opp_caches[:, 0, :]) / 2, (self.c_right_caches[:, -1, :] + self.c_opp_caches[:, 0, :]) / 2
+            elif self.merge_mode == "multiply":
+                return self.a_right_caches[:, -1, :] * self.a_opp_caches[:, 0, :], self.c_right_caches[:, -1, :] * self.c_opp_caches[:, 0, :]
+        return self.a_right_caches[:, -1, :], self.c_right_caches[:, -1, :]
+
+    def pass_states_to(self, target_lstm):
+        a_state, c_state = self.get_last_states()
+        target_lstm.set_states(a_state, c_state)
+
     def reset_states(self):
         self.a_state = None
         self.c_state = None
