@@ -160,6 +160,28 @@ class LSTM(Layer):
         self.a_state_opp = a_state_opp
         self.c_state_opp = c_state_opp
 
+    def set_gradient_from_decoder(self, da_decoder, dc_decoder):
+        if self.bidirectional:
+            if self.merge_mode == "concat":
+                self.da_next_right = da_decoder[:, :self.n_a]
+                self.da_next_opp = da_decoder[:, self.n_a:]
+                self.dc_next_right = dc_decoder[:, :self.n_a]
+                self.dc_next_opp = dc_decoder[:, self.n_a:]
+            elif self.merge_mode in ["sum", "average"]:
+                factor = 1.0 if self.merge_mode == "sum" else 0.5
+                self.da_next_right = da_decoder * factor
+                self.da_next_opp = da_decoder * factor
+                self.dc_next_right = dc_decoder * factor
+                self.dc_next_opp = dc_decoder * factor
+            elif self.merge_mode == "multiply":
+                self.da_next_right = da_decoder * self.a_opp_caches[:, 0, :]
+                self.da_next_opp = da_decoder * self.a_right_caches[:, -1, :]
+                self.dc_next_right = dc_decoder * self.c_opp_caches[:, 0, :]
+                self.dc_next_opp = dc_decoder * self.c_right_caches[:, -1, :]
+        else:
+            self.da_next_right = da_decoder
+            self.dc_next_right = dc_decoder
+
     def get_initial_state_gradients(self):
         return self.da_0, self.dc_0, self.da_0_opp, self.dc_0_opp
 
@@ -426,10 +448,8 @@ class LSTM(Layer):
             self.dWo_opp = np.zeros_like(self.Wo_opp)
             self.dbo_opp = np.zeros_like(self.bo_opp)
 
-        da_prevt_right = np.zeros((self.batch_size, self.n_a))
-        da_prevt_opp = np.zeros((self.batch_size, self.n_a))
-        dc_prevt_right = np.zeros((self.batch_size, self.n_a))
-        dc_prevt_opp = np.zeros((self.batch_size, self.n_a))
+        da_prevt_right = self.da_next_right if getattr(self, 'da_next_right', None) is not None else np.zeros((self.batch_size, self.n_a))
+        dc_prevt_right = self.dc_next_right if getattr(self, 'dc_next_right', None) is not None else np.zeros((self.batch_size, self.n_a))
 
         for t in reversed(range(self.T_x)):
             xt = self.xt_caches[:,t,:]
@@ -461,6 +481,8 @@ class LSTM(Layer):
         self.dc_0 = dc_prevt_right
 
         if self.bidirectional:
+            da_prevt_opp = self.da_next_opp if getattr(self, 'da_next_opp', None) is not None else np.zeros((self.batch_size, self.n_a))
+            dc_prevt_opp = self.dc_next_opp if getattr(self, 'dc_next_opp', None) is not None else np.zeros((self.batch_size, self.n_a))
             for t in range(self.T_x):
                 xt = self.xt_caches[:,t,:]
                 at_opp = self.a_opp_caches[:,t,:]
@@ -524,6 +546,10 @@ class LSTM(Layer):
             "dbi": self.dbi_right,
             "dbo": self.dbo_right
         }
+
+        self.da_next_right, self.dc_next_right = None, None
+        self.da_next_opp, self.dc_next_opp = None, None
+        
         return self.dxt_caches
 
     def update_parameters(self, learning_rate = 0.01, optimizer=None, beta1 = 0.9, beta2 = 0.99, maxValue = None, minValue = None):
