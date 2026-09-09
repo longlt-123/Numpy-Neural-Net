@@ -73,10 +73,10 @@ class Dense(Layer):
         elif activation == "sigmoid":
             dZ = sigmoid(activation_cache, derivative=True) * dA
         elif activation == "softmax":
-            # Lấy ma trận Jacobian 3D, kích thước (m, c, c)
-            jacobian = softmax(activation_cache, derivative=True)
-            # Nhân chập: dZ[i, k] = tổng_j(dA[i, j] * jacobian[i, j, k])
-            dZ = np.einsum('...pq,...p->...q', jacobian, dA, optimize=True)
+            s = softmax(activation_cache, derivative=False)
+            sum_dA_s = np.sum(dA * s, axis=-1, keepdims=True)
+            
+            dZ = s * (dA - sum_dA_s)
 
         A_prev, W, b = linear_cache
 

@@ -9,7 +9,7 @@ from functions.activations import relu, linear, sigmoid
 from functions.output import softmax
 from functions.loss import mean_square_error, categorical_cross_entropy, binary_cross_entropy
 from functions.score import accuracy_score, precision_score, recall_score, f1_score
-from functions.utilities import prepare_sequence_data, random_mini_batch, convert_targets, initialize_parameters, initialize_optimizer, shuffle_data
+from functions.utilities import prepare_sequence_data, random_mini_batch, convert_targets, initialize_parameters, initialize_optimizer
 
 from modules.base import Layer
 from modules.activation_layer import Activation

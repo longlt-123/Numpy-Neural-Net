@@ -35,8 +35,8 @@ class Activation(Layer):
         elif self.activation == "sigmoid":
             dA_prev = sigmoid(self.activation_cache, derivative=True) * dA
         elif self.activation == "softmax":
-            # Lấy ma trận Jacobian 3D, kích thước (m, c, c)
-            jacobian = softmax(self.activation_cache, derivative=True)
-            # Nhân chập: dA_prev[i, k] = tổng_j(dA[i, j] * jacobian[i, j, k])
-            dA_prev = np.einsum('...jk,...j->...k', jacobian, dA, optimize=True)
+            s = softmax(self.activation_cache, derivative=False)
+            sum_dA_s = np.sum(dA * s, axis=-1, keepdims=True)
+            
+            dZ = s * (dA - sum_dA_s)
         return dA_prev

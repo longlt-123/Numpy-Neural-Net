@@ -1,5 +1,5 @@
 import numpy as np
-from functions.utilities import random_mini_batch
+from functions.utilities import random_mini_batch, prepare_sequence_data
 from functions.loss import categorical_cross_entropy, mean_square_error, binary_cross_entropy
 
 class Seq2Seq:
@@ -15,6 +15,7 @@ class Seq2Seq:
         self.optimizer = None
         self.beta1 = 0.9
         self.beta2 = 0.99
+        self.regularize_penalty = 0
         
         self.enc_lstms = [l for l in self.encoder.layers if hasattr(l, 'lstm_cell_forward')]
         self.dec_lstms = [l for l in self.decoder.layers if hasattr(l, 'lstm_cell_forward')]
@@ -60,8 +61,10 @@ class Seq2Seq:
     def forward(self, X, Y, training=True):
         self.X = X
         self.Y = Y
+        regularize_penalty = 0
         
-        self.enc_out, _ = self.encoder.forward(X, training=training)
+        self.enc_out, enc_reg_penalty = self.encoder.forward(X, training=training)
+        regularize_penalty += enc_reg_penalty
         
         for enc_l, dec_l in zip(self.enc_lstms, self.dec_lstms):
             enc_l.pass_states_to(dec_l)
@@ -69,6 +72,7 @@ class Seq2Seq:
         A_dec = Y
         for layer in self.pre_lstm_layers:
             A_dec = layer.forward(A_dec, training=training)
+            regularize_penalty += layer.get_regularization_penalty(A_dec.shape[0])
         self.dec_emb_out = A_dec
         
         batch_size = Y.shape[0]
@@ -114,7 +118,7 @@ class Seq2Seq:
                             if hasattr(layer, attr):
                                 cache_dict[attr] = getattr(layer, attr)
                         self.step_caches[t].append((layer_idx, 'other', cache_dict))
-                        
+                regularize_penalty += layer.get_regularization_penalty(a_l.shape[0])
             out.append(a_l)
             
         self.dec_step_out = np.stack(out, axis=1)
@@ -124,7 +128,7 @@ class Seq2Seq:
             if type(layer).__name__ == "Attention": continue
             AL = layer.forward(AL, training=training)
             
-        return AL
+        return AL, regularize_penalty
 
     def backward(self, dL):
         dA = dL
@@ -157,7 +161,7 @@ class Seq2Seq:
 
         da_next = {idx: np.zeros((batch_size, l.n_a)) for idx, l in enumerate(self.step_layers) if hasattr(l, 'lstm_cell_forward')}
         dc_next = {idx: np.zeros((batch_size, l.n_a)) for idx, l in enumerate(self.step_layers) if hasattr(l, 'lstm_cell_forward')}
-        first_lstm_idx = next(i for i, l in enumerate(self.step_layers) if hasattr(l, 'lstm_cell_forward'))
+        first_dec_lstm_idx = next(i for i, l in enumerate(self.step_layers) if hasattr(l, 'lstm_cell_forward'))
         
         d_enc_out = np.zeros_like(self.enc_out)
         d_dec_emb = np.zeros_like(self.dec_emb_out)
@@ -197,8 +201,8 @@ class Seq2Seq:
                         shared_grads[layer_idx]['d_beta'] += layer.d_beta
                     
             if self.attention:
-                d_s_prev, d_h, d_y_emb = self.attention.backward_step(dA_t)
-                da_next[first_lstm_idx] += d_s_prev
+                d_s_prev, d_h, d_y_emb = self.attention.backward(dA_t)
+                da_next[first_dec_lstm_idx] += d_s_prev
                 d_enc_out += d_h
                 if d_y_emb is not None: d_dec_emb[:, t, :] += d_y_emb
             else:
@@ -237,20 +241,80 @@ class Seq2Seq:
         
         return d_enc_in
 
-    def fit(self, training_set, num_epochs, optimizer=None, learning_rate=0.001, beta1=0.9, beta2=0.99, verbose=True):
-        X_train, Y_train_input, Y_train_target = training_set
-        self.optimizer, self.learning_rate = optimizer, learning_rate
-        self.beta1, self.beta2 = beta1, beta2
-        
+    def fit(self, training_set, validation_set = None, num_epochs = None, cost_function = None, optimizer = None, learning_rate = 0.001, mini_batch_size = 64, beta1 = 0.9, beta2 = 0.99, 
+                epsilon = 1e-8, decay = None, decay_rate = 1, verbose = True):
+        X_train, Y_train = training_set
+        Y_train_input, Y_train_target, Y_train_input_oh, Y_train_target_oh, train_mask, _, _, _ = prepare_sequence_data(Y_train, self.decoder.char_to_idx, self.decoder.idx_to_char)
+        if validation_set is not None:
+            X_val, Y_val = validation_set
+            Y_val_input, Y_val_target, Y_val_input_oh, Y_val_target_oh, val_mask, _, _, _ = prepare_sequence_data(Y_val, self.decoder.char_to_idx, self.decoder.idx_to_char)
+
+        self.cost_func = cost_function
+        self.optimizer = optimizer
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.learning_rate = learning_rate
+
+        training_costs = []
+        validation_costs = []
+        learning_rates = []
+        t = 0
+        m = X_train.shape[0]
+        seed = 10
+
         if optimizer is not None:
             self.init_optimizer(optimizer)
-            
-        for epoch in range(num_epochs):
-            AL = self.forward(X_train, Y_train_input)
-            cost = self.compute_cost(Y_train_target, AL)
-            
-            dL = self.compute_cost(Y_train_target, AL, derivative=True)
-            self.backward(dL)
-            
+
+        for epoch in range(0, num_epochs):
+            seed = seed + 1
+            training_mini_batches = random_mini_batch(X_train, Y_train_input, Y_train_target_oh, mini_batch_size, seed)
+            total_training_cost = 0
+            num_train_batches = len(training_mini_batches)
+
             if verbose:
-                print(f"Epoch {epoch + 1}/{num_epochs} - Loss: {cost:.4f}")
+                print(f"\n[{'-'*15} EPOCH {epoch + 1}/{num_epochs} {'-'*15}]")
+
+            for batch_idx, mini_batch in enumerate(training_mini_batches):
+                mini_batch_X, mini_batch_Y_input, mini_batch_Y_target_oh = mini_batch
+
+                AL, self.regularize_penalty = self.forward(mini_batch_X, mini_batch_Y_input)
+                batch_train_cost = self.compute_cost(mini_batch_Y_target_oh, AL)
+                total_training_cost += batch_train_cost
+
+                dL = self.compute_cost(mini_batch_Y_target_oh, AL, derivative=True)
+                da_prev = self.backward(dL)
+
+                if verbose:
+                    print(f"Training   | Batch {batch_idx + 1}/{num_train_batches} - Loss: {batch_train_cost:.4f}", end='\r')
+
+            avg_train_cost = total_training_cost / num_train_batches
+            training_costs.append(avg_train_cost)
+
+            if verbose:
+                print()
+
+            if validation_set is not None:
+                validation_mini_batches = random_mini_batch(X_val, Y_val_input, Y_val_target_oh, mini_batch_size, seed)
+                total_validation_cost = 0
+                num_val_batches = len(validation_mini_batches)
+
+                for batch_idx, mini_batch in enumerate(validation_mini_batches):
+                    mini_batch_X, mini_batch_Y_input, mini_batch_Y_target_oh = mini_batch
+
+                    AL, self.regularize_penalty = self.forward(mini_batch_X, mini_batch_Y_input, training=False)
+                    batch_val_cost = self.compute_cost(mini_batch_Y_target_oh, AL)
+                    total_validation_cost += batch_val_cost
+
+                    if verbose:
+                            print(f"Validation | Batch {batch_idx + 1}/{num_val_batches} - Loss: {batch_val_cost:.4f}", end='\r')
+                if verbose:
+                        print()
+
+                avg_val_cost = total_validation_cost / num_val_batches
+                validation_costs.append(avg_val_cost)
+            
+            if decay:
+                self.learning_rate = decay(learning_rate, epoch, decay_rate)
+                learning_rates.append(self.learning_rate)
+
+        return training_costs, validation_costs, learning_rates

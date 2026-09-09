@@ -43,7 +43,7 @@ class Attention(Layer):
     def forward(self, s_prev, h, y_emb=None, training=True):
         batch_size, seq_len, _ = h.shape
         
-        repeat_layer = RepeatVector(seq_len)
+        repeat_layer = RepeatVector(seq_len, axis=1)
         s_expanded = repeat_layer.forward(s_prev)
         
         if training:
@@ -81,7 +81,7 @@ class Attention(Layer):
 
         return context, alpha
 
-    def backward_step(self, d_output):
+    def backward(self, d_output):
         s_prev = self.s_prev_caches.pop()
         h = self.h_caches.pop()
         y_emb = self.y_emb_caches.pop()

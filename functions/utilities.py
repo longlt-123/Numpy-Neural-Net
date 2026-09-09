@@ -3,81 +3,89 @@ import math
 from functions.activations import linear, relu, sigmoid, leaky_relu
 from functions.output import softmax
 
-def shuffle_data(X, Y):
-    m = X.shape[0]
-    permutation = np.random.permutation(m)
-    shuffle_X = X[permutation, :]
-    if Y is not None:
-        shuffle_Y = Y[permutation, :]
-    else:
-        shuffle_Y = None
-
-    return shuffle_X, shuffle_Y
-
-def random_mini_batch(X, Y, mini_batch_size = 64, seed = 0):
+def random_mini_batch(X, Y1=None, Y2=None, mini_batch_size = 64, seed = 0):
         if seed != 0:
             np.random.seed(seed)
         
         m = X.shape[0]
-        shuffle_X, shuffle_Y = shuffle_data(X, Y)
+        permutation = np.random.permutation(m)
+        shuffle_X = X[permutation, :]
+        shuffle_Y1 = Y1[permutation, :] if Y1 is not None else None
+        shuffle_Y2 = Y2[permutation, :] if Y2 is not None else None
 
         mini_batches = []
 
         num_complete_minibatches = m // mini_batch_size
         for k in range(num_complete_minibatches):
             mini_batch_X = shuffle_X[k * mini_batch_size : (k+1) * mini_batch_size, :]
-            mini_batch_Y = shuffle_Y[k * mini_batch_size : (k+1) * mini_batch_size, :]
-            mini_batch = (mini_batch_X, mini_batch_Y)
+            if shuffle_Y1 is not None:
+                mini_batch_Y1 = shuffle_Y1[k * mini_batch_size : (k+1) * mini_batch_size, :]
+            else:
+                mini_batch_Y1 = None
+            if shuffle_Y2 is not None:
+                mini_batch_Y2 = shuffle_Y2[k * mini_batch_size : (k+1) * mini_batch_size, :]
+            else:
+                mini_batch_Y2 = None
+            mini_batch = (mini_batch_X, mini_batch_Y1, mini_batch_Y2)
             mini_batches.append(mini_batch)
 
         if m % mini_batch_size != 0:
             mini_batch_X = shuffle_X[num_complete_minibatches * mini_batch_size :, :]
-            mini_batch_Y = shuffle_Y[num_complete_minibatches * mini_batch_size :, :]
-            mini_batch = (mini_batch_X, mini_batch_Y)
+            if shuffle_Y1 is not None:
+                mini_batch_Y1 = shuffle_Y1[num_complete_minibatches * mini_batch_size :, :]
+            else:
+                mini_batch_Y1 = None
+            if shuffle_Y2 is not None:
+                mini_batch_Y2 = shuffle_Y2[num_complete_minibatches * mini_batch_size :, :]
+            else:
+                mini_batch_Y2 = None
+            mini_batch = (mini_batch_X, mini_batch_Y1, mini_batch_Y2)
             mini_batches.append(mini_batch)
 
         return mini_batches
 
-def prepare_sequence_data(words, char_to_idx, idx_to_char, max_len=None):
-    """
-    Chuyển đổi danh sách các từ thành ma trận đầu vào X, Y dạng one-hot kèm mask.
-    """
-    vocab_size = len(char_to_idx)
+def prepare_sequence_data(sentences, word_to_idx, idx_to_word, max_len=None):
+    vocab_size = len(word_to_idx)
     
     START_IDX = vocab_size
     END_IDX = vocab_size + 1
     PAD_IDX = vocab_size + 2
     UNKNOWN_IDX = vocab_size + 3
 
-    char_to_idx["<START>"] = START_IDX
-    char_to_idx["<END>"] = END_IDX
-    char_to_idx["<PAD>"] = PAD_IDX
-    char_to_idx["<UNK>"] = UNKNOWN_IDX
+    tmp_word_to_idx = word_to_idx.copy()
+    tmp_idx_to_word = idx_to_word.copy()
 
-    idx_to_char[START_IDX] = "<START>"
-    idx_to_char[END_IDX] = "<END>"
-    idx_to_char[PAD_IDX] = "<PAD>"
-    idx_to_char[UNKNOWN_IDX] = "<UNK>"
+    tmp_word_to_idx["<START>"] = START_IDX
+    tmp_word_to_idx["<END>"] = END_IDX
+    tmp_word_to_idx["<PAD>"] = PAD_IDX
+    tmp_word_to_idx["<UNK>"] = UNKNOWN_IDX
+
+    tmp_idx_to_word[START_IDX] = "<START>"
+    tmp_idx_to_word[END_IDX] = "<END>"
+    tmp_idx_to_word[PAD_IDX] = "<PAD>"
+    tmp_idx_to_word[UNKNOWN_IDX] = "<UNK>"
 
     num_classes = vocab_size + 4
+    tokenized_sentences = []
+    for sentence in sentences:
+        if isinstance(sentence, str):
+            tokenized_sentences.append(sentence.strip().split())
+        else:
+            tokenized_sentences.append(sentence)
 
     if max_len is None:
-        max_len = max(len(w) for w in words) + 1
-        
-    m = len(words)
+        max_len = max(len(s) for s in tokenized_sentences) + 1
+    m = len(tokenized_sentences)
     
     X_idx = np.full((m, max_len), PAD_IDX, dtype=int)
     Y_idx = np.full((m, max_len), PAD_IDX, dtype=int)
     mask = np.zeros((m, max_len), dtype=int)
     
-    for i, word in enumerate(words):
-        chars = [char_to_idx[c] for c in word if c in char_to_idx]
-        unknown_chars = [UNKNOWN_IDX for c in word if c not in char_to_idx]
-        if unknown_chars:
-            chars += unknown_chars
+    for i, tokens in enumerate(tokenized_sentences):
+        seq_indices = [tmp_word_to_idx.get(w, UNKNOWN_IDX) for w in tokens]
 
-        x_seq = [START_IDX] + chars
-        y_seq = chars + [END_IDX]
+        x_seq = [START_IDX] + seq_indices
+        y_seq = seq_indices + [END_IDX]
         
         x_seq = x_seq[:max_len]
         y_seq = y_seq[:max_len]
@@ -87,6 +95,7 @@ def prepare_sequence_data(words, char_to_idx, idx_to_char, max_len=None):
         Y_idx[i, :length] = y_seq
 
         mask[i, :length] = 1
+
     X_onehot = np.zeros((m, max_len, num_classes))
     Y_onehot = np.zeros((m, max_len, num_classes))
     mask_3d = mask[:, :, np.newaxis]
@@ -98,7 +107,7 @@ def prepare_sequence_data(words, char_to_idx, idx_to_char, max_len=None):
 
     Y_onehot = Y_onehot * mask_3d
 
-    return X_idx, Y_idx, X_onehot, Y_onehot, mask, max_len, char_to_idx, idx_to_char
+    return X_idx, Y_idx, X_onehot, Y_onehot, mask, max_len, tmp_word_to_idx, tmp_idx_to_word
 
 def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
     if to is None:
