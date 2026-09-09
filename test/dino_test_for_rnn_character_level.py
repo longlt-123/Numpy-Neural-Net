@@ -26,8 +26,8 @@ char_to_idx = {ch: i for i, ch in enumerate(chars)}
 idx_to_char = {i: ch for i, ch in enumerate(chars)}
 print(f"Kích thước tập từ vựng (chars): {len(char_to_idx)}")
 
-X_train, Y_train, mask, max_len = prepare_sequence_data(words, char_to_idx)
-num_classes = len(char_to_idx) + 4
+_, _, X_train, Y_train, mask, max_len, char_to_idx, idx_to_char = prepare_sequence_data(words, char_to_idx, idx_to_char)
+num_classes = len(char_to_idx)
 
 
 model = RNN(input_dim=X_train.shape)

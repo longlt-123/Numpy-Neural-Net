@@ -40,7 +40,7 @@ def random_mini_batch(X, Y, mini_batch_size = 64, seed = 0):
 
 import numpy as np
 
-def prepare_sequence_data(words, char_to_idx, max_len=None):
+def prepare_sequence_data(words, char_to_idx, idx_to_char, max_len=None):
     """
     Chuyển đổi danh sách các từ thành ma trận đầu vào X, Y dạng one-hot kèm mask.
     """
@@ -50,6 +50,17 @@ def prepare_sequence_data(words, char_to_idx, max_len=None):
     END_IDX = vocab_size + 1
     PAD_IDX = vocab_size + 2
     UNKNOWN_IDX = vocab_size + 3
+
+    char_to_idx["<START>"] = START_IDX
+    char_to_idx["<END>"] = END_IDX
+    char_to_idx["<PAD>"] = PAD_IDX
+    char_to_idx["<UNK>"] = UNKNOWN_IDX
+
+    idx_to_char[START_IDX] = "<START>"
+    idx_to_char[END_IDX] = "<END>"
+    idx_to_char[PAD_IDX] = "<PAD>"
+    idx_to_char[UNKNOWN_IDX] = "<UNK>"
+
     num_classes = vocab_size + 4
 
     if max_len is None:
@@ -89,7 +100,7 @@ def prepare_sequence_data(words, char_to_idx, max_len=None):
 
     Y_onehot = Y_onehot * mask_3d
 
-    return X_onehot, Y_onehot, mask, max_len
+    return X_idx, Y_idx, X_onehot, Y_onehot, mask, max_len, char_to_idx, idx_to_char
 
 def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
     if to is None:
