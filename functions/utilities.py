@@ -38,8 +38,6 @@ def random_mini_batch(X, Y, mini_batch_size = 64, seed = 0):
 
         return mini_batches
 
-import numpy as np
-
 def prepare_sequence_data(words, char_to_idx, idx_to_char, max_len=None):
     """
     Chuyển đổi danh sách các từ thành ma trận đầu vào X, Y dạng one-hot kèm mask.

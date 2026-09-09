@@ -24,7 +24,7 @@ from optimizers.momentum import momentum
 from optimizers.RMSprop import rmsprop
 
 class RNN:
-    def __init__(self, input_dim, layers: list = None):
+    def __init__(self, input_dim, layers: list = None, char_to_idx=None, idx_to_char=None):
         self.layers: list = []
         self.optimizer = None
         self.beta1 = None
@@ -34,6 +34,8 @@ class RNN:
         self.regularize_penalty = 0
         self.input_dim = input_dim
         self.can_sampling = True
+        self.char_to_idx = char_to_idx
+        self.idx_to_char = idx_to_char
 
         if isinstance(input_dim, tuple):
             self.current_layer_neurons = input_dim[-1]

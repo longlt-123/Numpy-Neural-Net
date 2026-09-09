@@ -3,20 +3,33 @@ from modules.base import Layer
 from functions.utilities import initialize_parameters, initialize_optimizer
 
 class Embedding(Layer):
-    def __init__(self, embedding_dim, init_type = "he", input_type="idx", index_column = 0, transfer_weights = None, freeze = True):
+    def __init__(self, embedding_dim, init_type = "he", input_type="idx", index_column = 0, transfer_weights = None, terminal_word = False, freeze = True):
         self.embedding_dim = embedding_dim
         self.init_type = init_type
         self.input_type = input_type
         self.index_column = index_column
+        self.terminal_word = terminal_word
         self.freeze = freeze
         self.A_prev = None
         self.E = None
         if transfer_weights is not None:
             self.E = transfer_weights
+            if self.terminal_word:
+                vocab_size = self.E.shape[0]
+                self.E[vocab_size] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
+                self.E[vocab_size + 1] = np.zeros(self.embedding_dim)
+                self.E[vocab_size + 2] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
+                self.E[vocab_size + 3] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
         self.dE = None
 
     def init_params(self, vocab_size=None):
         self.E = initialize_parameters(vocab_size, self.embedding_dim, self.init_type)
+        if self.terminal_word:
+            vocab_size = self.E.shape[0]
+            self.E[vocab_size] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
+            self.E[vocab_size + 1] = np.zeros(self.embedding_dim)
+            self.E[vocab_size + 2] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
+            self.E[vocab_size + 3] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
 
     def forward(self, A_prev, training=False):
         if self.input_type == "idx":
