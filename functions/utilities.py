@@ -44,14 +44,50 @@ def random_mini_batch(X, Y1=None, Y2=None, mini_batch_size = 64, seed = 0):
 
         return mini_batches
 
-def prepare_sequence_data(sentences, word_to_idx, idx_to_word, max_len=None):
-    vocab_size = len(word_to_idx)
-    
-    START_IDX = vocab_size
-    END_IDX = vocab_size + 1
-    PAD_IDX = vocab_size + 2
-    UNKNOWN_IDX = vocab_size + 3
+def convert_sequence_to_indices(sequence, word_to_idx, UNKNOWN_IDX):
+    return [word_to_idx.get(word, UNKNOWN_IDX) for word in sequence]
 
+def pad_sequence(sequence, maxlen, padding='post', truncating='post', PAD_IDX=0):
+    if len(sequence) == 0:
+        raise ValueError("Input sequence is empty.")
+        
+    if truncating == 'pre':
+        trunc = sequence[-maxlen:]
+    else:
+        trunc = sequence[:maxlen]
+
+    padded_sequence = np.full(maxlen, PAD_IDX, dtype=int)
+    mask = np.zeros(maxlen, dtype=int)
+
+    if padding == 'post':
+        padded_sequence[:len(trunc)] = trunc
+        mask[:len(trunc)] = 1
+    else:
+        padded_sequence[-len(trunc):] = trunc
+        mask[-len(trunc):] = 1
+
+    return padded_sequence, mask
+
+def shift_sequence(sequence, mode="left", shift=1, SHIFT_IDX=0):
+    shifted = np.full_like(sequence, SHIFT_IDX)
+    if shift < len(sequence):
+        if mode == "left":
+            shifted[shift:] = sequence[:-shift]
+        elif mode == "right":
+            shifted[:-shift] = sequence[shift:]
+        else:
+            raise ValueError("Mode must be 'left' or 'right'")
+    return shifted
+
+def sequences_one_hot_encode(sequences, num_classes):
+    one_hot = np.zeros((len(sequences), len(sequences[0]), num_classes))
+    for i, seq in enumerate(sequences):
+        for j, idx in enumerate(seq):
+            if idx < num_classes:
+                one_hot[i, j, idx] = 1
+    return one_hot
+
+def prepare_sequence_data(sentences, vocab_size, word_to_idx, idx_to_word, max_len=None, shift_mode=None, shift=1, SHIFT_IDX=0, PAD_IDX=0, START_IDX=None, END_IDX=None, UNKNOWN_IDX=None):
     tmp_word_to_idx = word_to_idx.copy()
     tmp_idx_to_word = idx_to_word.copy()
 
@@ -65,49 +101,39 @@ def prepare_sequence_data(sentences, word_to_idx, idx_to_word, max_len=None):
     tmp_idx_to_word[PAD_IDX] = "<PAD>"
     tmp_idx_to_word[UNKNOWN_IDX] = "<UNK>"
 
-    num_classes = vocab_size + 4
+    num_classes = vocab_size
     tokenized_sentences = []
     for sentence in sentences:
-        if isinstance(sentence, str):
+        if isinstance(sentence, (str, np.str_)):
             tokenized_sentences.append(sentence.strip().split())
         else:
             tokenized_sentences.append(sentence)
 
     if max_len is None:
-        max_len = max(len(s) for s in tokenized_sentences) + 1
+        if shift_mode is not None:
+            max_len = max(len(s) for s in tokenized_sentences) + shift
+        else:
+            max_len = max(len(s) for s in tokenized_sentences)
     m = len(tokenized_sentences)
-    
-    X_idx = np.full((m, max_len), PAD_IDX, dtype=int)
-    Y_idx = np.full((m, max_len), PAD_IDX, dtype=int)
+
     mask = np.zeros((m, max_len), dtype=int)
+    seq_idx = np.zeros((m, max_len), dtype=int)
     
     for i, tokens in enumerate(tokenized_sentences):
-        seq_indices = [tmp_word_to_idx.get(w, UNKNOWN_IDX) for w in tokens]
+        seq_indices = convert_sequence_to_indices(tokens, tmp_word_to_idx, UNKNOWN_IDX)
+        seq_padded, seq_mask = pad_sequence(seq_indices, maxlen=max_len, padding='post', truncating='post', PAD_IDX=PAD_IDX)
+        mask[i, :] = seq_mask
+        if shift_mode is not None:
+            seq_shifted = shift_sequence(seq_padded, mode=shift_mode, shift=shift, SHIFT_IDX=SHIFT_IDX)
+        else:
+            seq_shifted = seq_padded
+        seq_idx[i, :] = seq_shifted
 
-        x_seq = [START_IDX] + seq_indices
-        y_seq = seq_indices + [END_IDX]
-        
-        x_seq = x_seq[:max_len]
-        y_seq = y_seq[:max_len]
-        
-        length = len(x_seq)
-        X_idx[i, :length] = x_seq
-        Y_idx[i, :length] = y_seq
-
-        mask[i, :length] = 1
-
-    X_onehot = np.zeros((m, max_len, num_classes))
-    Y_onehot = np.zeros((m, max_len, num_classes))
     mask_3d = mask[:, :, np.newaxis]
-    
-    for i in range(m):
-        for t in range(max_len):
-            X_onehot[i, t, X_idx[i, t]] = 1
-            Y_onehot[i, t, Y_idx[i, t]] = 1
+    seq_oh = sequences_one_hot_encode(seq_idx, num_classes)
+    seq_oh_masked = seq_oh * mask_3d
 
-    Y_onehot = Y_onehot * mask_3d
-
-    return X_idx, Y_idx, X_onehot, Y_onehot, mask, max_len, tmp_word_to_idx, tmp_idx_to_word
+    return seq_idx, seq_oh, seq_oh_masked, mask, max_len, tmp_word_to_idx, tmp_idx_to_word
 
 def convert_targets(targets: np.ndarray, to: str = None, threshold = 0.5):
     if to is None:

@@ -243,11 +243,9 @@ class Seq2Seq:
 
     def fit(self, training_set, validation_set = None, num_epochs = None, cost_function = None, optimizer = None, learning_rate = 0.001, mini_batch_size = 64, beta1 = 0.9, beta2 = 0.99, 
                 epsilon = 1e-8, decay = None, decay_rate = 1, verbose = True):
-        X_train, Y_train = training_set
-        Y_train_input, Y_train_target, Y_train_input_oh, Y_train_target_oh, train_mask, _, _, _ = prepare_sequence_data(Y_train, self.decoder.char_to_idx, self.decoder.idx_to_char)
+        X_train, Y_train_input, Y_train_target_oh = training_set
         if validation_set is not None:
-            X_val, Y_val = validation_set
-            Y_val_input, Y_val_target, Y_val_input_oh, Y_val_target_oh, val_mask, _, _, _ = prepare_sequence_data(Y_val, self.decoder.char_to_idx, self.decoder.idx_to_char)
+            X_val, Y_val_input, Y_val_target_oh = validation_set
 
         self.cost_func = cost_function
         self.optimizer = optimizer

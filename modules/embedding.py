@@ -3,45 +3,20 @@ from modules.base import Layer
 from functions.utilities import initialize_parameters, initialize_optimizer
 
 class Embedding(Layer):
-    def __init__(self, embedding_dim, init_type = "he", input_type="idx", index_column = 0, transfer_weights = None, terminal_word = None, freeze = True):
+    def __init__(self, embedding_dim, init_type = "he", input_type="idx", index_column = 0, transfer_weights = None, freeze = True):
         self.embedding_dim = embedding_dim
         self.init_type = init_type
         self.input_type = input_type
         self.index_column = index_column
-        self.terminal_word = terminal_word
         self.freeze = freeze
         self.A_prev = None
         self.E = None
         if transfer_weights is not None:
-            if self.terminal_word is None:
-                self.E = transfer_weights
-            else:
-                old_E = transfer_weights
-                vocab_size = old_E.shape[0]
-                self.E = np.zeros(
-                    (vocab_size + len(self.terminal_word), self.embedding_dim)
-                )
-                self.E[:vocab_size, :] = transfer_weights
-
-                for i in range(len(self.terminal_word)):
-                    if self.terminal_word[i] == "<PAD>":
-                        self.E[vocab_size + i] = np.zeros(self.embedding_dim)
-                    else:
-                        self.E[vocab_size + i] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
+            self.E = transfer_weights
         self.dE = None
 
     def init_params(self, vocab_size=None):
-        if self.terminal_word is not None:
-            total_vocab_size = vocab_size + len(self.terminal_word)
-        else:
-            total_vocab_size = vocab_size
-        self.E = initialize_parameters(total_vocab_size, self.embedding_dim, self.init_type)
-        if self.terminal_word is not None:
-            for i in range(len(self.terminal_word)):
-                if self.terminal_word[i] == "<PAD>":
-                    self.E[vocab_size + i] = np.zeros(self.embedding_dim)
-                else:
-                    self.E[vocab_size + i] = np.random.randn(self.embedding_dim) * np.sqrt(2 / vocab_size)
+        self.E = initialize_parameters(vocab_size, self.embedding_dim, self.init_type)
 
     def forward(self, A_prev, training=False):
         if self.input_type == "idx":

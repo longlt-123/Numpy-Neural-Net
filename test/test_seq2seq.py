@@ -30,7 +30,7 @@ def read_glove_vecs(glove_file):
             words.add(curr_word)
             word_to_vec_map[curr_word] = np.array(line[1:], dtype=np.float64)
         
-        i = 0
+        i = 1
         words_to_index = {}
         index_to_words = {}
         for w in sorted(words):
@@ -41,37 +41,48 @@ def read_glove_vecs(glove_file):
 
 word_to_index, index_to_word, word_to_vec_map = read_glove_vecs(os.path.join(root_dir, "data", 'glove.6B.50d.txt'))
 
-vocab_size = len(word_to_index)
+vocab_size = len(word_to_index) + 1
 any_word = next(iter(word_to_vec_map.keys()))
 emb_dim = word_to_vec_map[any_word].shape[0]
+
+START_IDX = vocab_size
+END_IDX = vocab_size + 1
+PAD_IDX = 0
+UNKNOWN_IDX = vocab_size + 2
 
 print(vocab_size)
 print(any_word)
 print(emb_dim)
 
+vocab_size = vocab_size + 3  # Adjust for special tokens
 emb_matrix = np.zeros((vocab_size, emb_dim))
 
 for word, idx in word_to_index.items():
     emb_matrix[idx, :] = word_to_vec_map[word] 
 
-X_train = np.array(["hello world", "good morning"])
-Y_train = np.array(["bonjour monde", "bon matin"])
+emb_matrix[START_IDX, :] = np.random.randn(emb_dim) * 0.01
+emb_matrix[END_IDX, :] = np.random.randn(emb_dim) * 0.01
+emb_matrix[PAD_IDX, :] = np.zeros(emb_dim)
+emb_matrix[UNKNOWN_IDX, :] = np.random.randn(emb_dim) * 0.01
 
-X_train, _, _, _, _, _, x_word_to_idx, x_idx_to_word = prepare_sequence_data(X_train, word_to_index, index_to_word, max_len=5+1)
-X_train = X_train[:, 1:]  # Remove the START token for input to the model
+X_train = ["hello world", "good morning"]
+Y_train = ["bonjour monde", "bon matin"]
+
+X_train, _, _, _, _, x_word_to_idx, x_idx_to_word = prepare_sequence_data(X_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode=None, shift=1, SHIFT_IDX=START_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
+Y_train_input, _, _, _, _, y_word_to_idx, y_idx_to_word = prepare_sequence_data(Y_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode="left", shift=1, SHIFT_IDX=START_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
+Y_train_target, _, Y_train_target_oh_masked, _, _, y_word_to_idx, y_idx_to_word = prepare_sequence_data(Y_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode="right", shift=1, SHIFT_IDX=END_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
 terminal_word = ["<START>", "<END>", "<PAD>", "<UNK>"]
 print("Vocabulary size:", len(x_word_to_idx))
 print("Input sequence shape:", X_train.shape)
 print("Input sequence:", X_train)
 
 encoder = RNN(input_dim=vocab_size)
-encoder.add(Embedding(embedding_dim=emb_dim, transfer_weights=emb_matrix, terminal_word=terminal_word, freeze=True))
+encoder.add(Embedding(embedding_dim=emb_dim, transfer_weights=emb_matrix, freeze=True))
 encoder.add(LSTM(hidden_state_dim=64, bidirectional=True, init_type="he", return_sequences=True, merge_mode="concat"))
 
 decoder_emb = Embedding(
     embedding_dim=emb_dim, 
-    transfer_weights=emb_matrix, 
-    terminal_word=terminal_word, 
+    transfer_weights=emb_matrix,
     freeze=True
 )
 decoder_lstm = LSTM(hidden_state_dim=64*2, return_sequences=True)
@@ -79,8 +90,8 @@ decoder_lstm = LSTM(hidden_state_dim=64*2, return_sequences=True)
 decoder = RNN(
     input_dim=vocab_size, 
     layers=[decoder_emb, decoder_lstm], 
-    char_to_idx=word_to_index.copy(), 
-    idx_to_char=index_to_word.copy()
+    char_to_idx=y_word_to_idx.copy(), 
+    idx_to_char=y_idx_to_word.copy()
 )
 
 attention_layer = Attention(mode="dense", context_mode="concat")
@@ -89,11 +100,11 @@ decoder_lstm.init_params(input_dims=emb_dim + 64*2)
 
 model = Seq2Seq(encoder, decoder)
 model.add(attention_layer)
-model.add(Dense(vocab_size + 4, activation="softmax"))
+model.add(Dense(vocab_size, activation="softmax"))
 
 print("Test luồng forward và backward có Attention")
 training_costs, _, _ = model.fit(
-    training_set=(X_train, Y_train), 
+    training_set=(X_train, Y_train_input, Y_train_target_oh_masked), 
     num_epochs=5, 
     cost_function="categorical_cross_entropy", 
     optimizer="adam", 
