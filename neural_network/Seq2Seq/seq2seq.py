@@ -316,3 +316,86 @@ class Seq2Seq:
                 learning_rates.append(self.learning_rate)
 
         return training_costs, validation_costs, learning_rates
+
+    def sampling(self, X_test, max_length=100, temperature=1.0, seed=None):
+        if seed is not None:
+            np.random.seed(seed)
+            
+        batch_size = X_test.shape[0]
+        vocab_size = len(self.decoder.char_to_idx)
+        num_classes = vocab_size
+
+        START_IDX = self.decoder.char_to_idx.get("<START>", num_classes)
+        END_IDX = self.decoder.char_to_idx.get("<END>", num_classes + 1)
+        
+        enc_out, _ = self.encoder.forward(X_test, training=False)
+        for enc_l, dec_l in zip(self.enc_lstms, self.dec_lstms):
+            enc_l.pass_states_to(dec_l)
+            
+        if self.attention:
+            self.attention.reset_caches()
+            
+        current_idx = np.full((batch_size,), START_IDX, dtype=int)
+        sampled_indices = []
+        finished_sequences = np.zeros(batch_size, dtype=bool)
+        
+        for _ in range(max_length):
+            Y_step = current_idx.reshape(batch_size, 1).astype(int)
+            
+            A_dec = Y_step
+            for layer in self.pre_lstm_layers:
+                A_dec = layer.forward(A_dec, training=False)
+                
+            y_t = A_dec[:, 0, :]
+            
+            first_lstm = self.dec_lstms[0]
+            s_prev = first_lstm.a_state if first_lstm.a_state is not None else np.zeros((batch_size, first_lstm.n_a))
+            if self.attention:
+                ctx_t, _ = self.attention.forward(s_prev, enc_out, y_t, training=False)
+            else:
+                ctx_t = y_t
+                
+            a_l = ctx_t
+            
+            for layer in self.step_layers:
+                if hasattr(layer, 'lstm_cell_forward'):
+                    s_l = layer.a_state if layer.a_state is not None else np.zeros((batch_size, layer.n_a))
+                    c_l = layer.c_state if layer.c_state is not None else np.zeros((batch_size, layer.n_a))
+                    
+                    s_next, c_next, _, _, _, _ = layer.lstm_cell_forward(a_l, s_l, c_l)
+                    layer.a_state, layer.c_state = s_next, c_next
+                    a_l = s_next
+                else:
+                    a_l = layer.forward(a_l, training=False)
+                    
+            
+            AL = np.expand_dims(a_l, axis=1)
+            for layer in self.layers:
+                if type(layer).__name__ == "Attention": 
+                    continue
+                AL = layer.forward(AL, training=False)
+                
+            
+            raw_logits = AL[:, 0, :]
+            
+            if temperature == 0:
+                next_idx = np.argmax(raw_logits, axis=-1)
+            else:
+                scaled_logits = raw_logits / temperature
+                probabilities = np.clip(scaled_logits, 1e-7, 1.0)
+                probabilities = probabilities / np.sum(probabilities, axis=1, keepdims=True)
+                
+                next_idx = np.array([
+                    np.random.choice(num_classes, p=probabilities[i]) for i in range(batch_size)
+                ])
+                
+            next_idx[finished_sequences] = END_IDX
+            sampled_indices.append(next_idx)
+            finished_sequences = finished_sequences | (next_idx == END_IDX)
+            
+            if np.all(finished_sequences):
+                break
+                
+            current_idx = next_idx
+        
+        return np.array(sampled_indices).T.tolist()

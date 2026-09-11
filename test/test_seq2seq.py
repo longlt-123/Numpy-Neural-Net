@@ -103,7 +103,7 @@ model.add(attention_layer)
 model.add(Dense(vocab_size, activation="softmax"))
 
 print("Test luồng forward và backward có Attention")
-training_costs, _, _ = model.fit(
+training_costs, validation_costs, _ = model.fit(
     training_set=(X_train, Y_train_input, Y_train_target_oh_masked), 
     num_epochs=5, 
     cost_function="categorical_cross_entropy", 
@@ -112,3 +112,29 @@ training_costs, _, _ = model.fit(
 )
 
 print("Test Attention thành công! Loss:", training_costs[-1])
+
+X_test = np.array(["hello world", "good morning"])
+X_test, _, _, _, _, x_word_to_idx, x_idx_to_word = prepare_sequence_data(X_test, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode=None, shift=1, SHIFT_IDX=START_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
+sampled_sequences = model.sampling(X_test, temperature=1.0, max_length=20)
+print ("Sampled sequences:", sampled_sequences)
+for i in range(len(sampled_sequences)):
+    seq = sampled_sequences[i]
+    word_seq = [y_idx_to_word[idx] + " " for idx in seq]
+    print(f"Input: {X_test[i]} | Sampled Output: {''.join(word_seq)}")
+
+    epochs = range(1, len(training_costs) + 1)
+plt.figure(figsize=(10, 6))
+plt.plot(epochs, training_costs, label='Training Loss', color='blue', linewidth=2)
+
+if validation_costs:
+    plt.plot(epochs, validation_costs, label='Validation Loss', color='red', linewidth=2, linestyle='--')
+
+plt.title('Biểu đồ biểu diễn Loss qua từng Epoch', fontsize=16, fontweight='bold')
+plt.xlabel('Epochs', fontsize=12)
+plt.ylabel('Loss (Binary Cross Entropy)', fontsize=12)
+
+plt.legend(fontsize=12)
+plt.grid(True, linestyle=':', alpha=0.7)
+
+plt.tight_layout()
+plt.show()

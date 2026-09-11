@@ -112,7 +112,7 @@ def prepare_sequence_data(sentences, vocab_size, word_to_idx, idx_to_word, max_l
     if max_len is None:
         max_len = max(len(s) for s in tokenized_sentences)
 
-    if shift_mode is None:
+    if shift_mode is not None:
         max_len = max_len + shift
     m = len(tokenized_sentences)
 
@@ -121,16 +121,15 @@ def prepare_sequence_data(sentences, vocab_size, word_to_idx, idx_to_word, max_l
     
     for i, tokens in enumerate(tokenized_sentences):
         seq_indices = convert_sequence_to_indices(tokens, tmp_word_to_idx, UNKNOWN_IDX)
-        seq_padded, seq_mask = pad_sequence(seq_indices, maxlen=max_len, padding='post', truncating='post', PAD_IDX=PAD_IDX)
-        mask[i, :] = seq_mask
+        seq_padded, _ = pad_sequence(seq_indices, maxlen=max_len, padding='post', truncating='post', PAD_IDX=PAD_IDX)
+        
         if shift_mode is not None:
             seq_shifted = shift_sequence(seq_padded, mode=shift_mode, shift=shift, SHIFT_IDX=SHIFT_IDX)
-            seq_mask_shifted = shift_sequence(seq_mask, mode=shift_mode, shift=shift, SHIFT_IDX=0)
         else:
             seq_shifted = seq_padded
-            seq_mask_shifted = seq_mask
+            
         seq_idx[i, :] = seq_shifted
-        mask[i, :] = seq_mask_shifted
+        mask[i, :] = (seq_shifted != PAD_IDX).astype(int)
 
     mask_3d = mask[:, :, np.newaxis]
     seq_oh = sequences_one_hot_encode(seq_idx, num_classes)
