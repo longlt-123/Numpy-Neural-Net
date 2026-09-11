@@ -110,10 +110,10 @@ def prepare_sequence_data(sentences, vocab_size, word_to_idx, idx_to_word, max_l
             tokenized_sentences.append(sentence)
 
     if max_len is None:
-        if shift_mode is not None:
-            max_len = max(len(s) for s in tokenized_sentences) + shift
-        else:
-            max_len = max(len(s) for s in tokenized_sentences)
+        max_len = max(len(s) for s in tokenized_sentences)
+
+    if shift_mode is None:
+        max_len = max_len + shift
     m = len(tokenized_sentences)
 
     mask = np.zeros((m, max_len), dtype=int)
