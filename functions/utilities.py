@@ -125,9 +125,12 @@ def prepare_sequence_data(sentences, vocab_size, word_to_idx, idx_to_word, max_l
         mask[i, :] = seq_mask
         if shift_mode is not None:
             seq_shifted = shift_sequence(seq_padded, mode=shift_mode, shift=shift, SHIFT_IDX=SHIFT_IDX)
+            seq_mask_shifted = shift_sequence(seq_mask, mode=shift_mode, shift=shift, SHIFT_IDX=0)
         else:
             seq_shifted = seq_padded
+            seq_mask_shifted = seq_mask
         seq_idx[i, :] = seq_shifted
+        mask[i, :] = seq_mask_shifted
 
     mask_3d = mask[:, :, np.newaxis]
     seq_oh = sequences_one_hot_encode(seq_idx, num_classes)

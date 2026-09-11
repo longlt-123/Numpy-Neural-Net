@@ -144,7 +144,7 @@ class RNN:
 
         for epoch in range(0, num_epochs):
             seed = seed + 1
-            training_mini_batches = random_mini_batch(X_train, Y_train, mini_batch_size, seed)
+            training_mini_batches = random_mini_batch(X_train, Y_train, mini_batch_size=mini_batch_size, seed=seed)
             total_training_cost = 0
             num_train_batches = len(training_mini_batches)
 
@@ -152,7 +152,7 @@ class RNN:
                 print(f"\n[{'-'*15} EPOCH {epoch + 1}/{num_epochs} {'-'*15}]")
 
             for batch_idx, mini_batch in enumerate(training_mini_batches):
-                mini_batch_X, mini_batch_Y = mini_batch
+                mini_batch_X, mini_batch_Y, _ = mini_batch
 
                 AL, self.regularize_penalty = self.forward(mini_batch_X)
                 batch_train_cost = self.compute_cost(mini_batch_Y, AL)
@@ -171,12 +171,12 @@ class RNN:
                 print()
 
             if validation_set is not None:
-                validation_mini_batches = random_mini_batch(X_val, Y_val, mini_batch_size, seed)
+                validation_mini_batches = random_mini_batch(X_val, Y_val, mini_batch_size=mini_batch_size, seed=seed)
                 total_validation_cost = 0
                 num_val_batches = len(validation_mini_batches)
 
                 for batch_idx, mini_batch in enumerate(validation_mini_batches):
-                    mini_batch_X, mini_batch_Y = mini_batch
+                    mini_batch_X, mini_batch_Y, _ = mini_batch
     
                     AL, self.regularize_penalty = self.forward(mini_batch_X, training=False)
                     batch_val_cost = self.compute_cost(mini_batch_Y, AL)
@@ -204,18 +204,18 @@ class RNN:
         AL, _ = self.forward(X_test, training = False)
         return AL
 
-    def sampling(self, char_to_idx, idx_to_char, seed = 0, temperature = 1.0, max_length = 100):
+    def sampling(self, seed = 0, temperature = 1.0, max_length = 100):
         if self.can_sampling == False:
             raise ValueError("Model has bidirectional layer so can not sampling")
         
         np.random.seed(seed)
         
-        vocab_size = len(char_to_idx)
-        START_IDX = vocab_size
-        END_IDX = vocab_size + 1
-        PAD_IDX = vocab_size + 2
-        UNKNOWN_IDX = vocab_size + 3
-        num_classes = vocab_size + 4
+        vocab_size = len(self.char_to_idx)
+        START_IDX = self.char_to_idx.get("<START>", vocab_size)
+        END_IDX = self.char_to_idx.get("<END>", vocab_size + 1)
+        PAD_IDX = self.char_to_idx.get("<PAD>", vocab_size + 2)
+        UNKNOWN_IDX = self.char_to_idx.get("<UNK>", vocab_size + 3)
+        num_classes = vocab_size
 
         for layer in self.layers:
             if hasattr(layer, 'a_state'):
@@ -248,5 +248,5 @@ class RNN:
             sampled_indices.append(next_idx)
             current_idx = next_idx
 
-        sampled_text = ''.join(idx_to_char[i] for i in sampled_indices if i < vocab_size)
+        sampled_text = ''.join(self.idx_to_char[i] for i in sampled_indices if i < vocab_size)
         return sampled_text, sampled_indices

@@ -38,5 +38,5 @@ class Activation(Layer):
             s = softmax(self.activation_cache, derivative=False)
             sum_dA_s = np.sum(dA * s, axis=-1, keepdims=True)
             
-            dZ = s * (dA - sum_dA_s)
+            dA_prev = s * (dA - sum_dA_s)
         return dA_prev
