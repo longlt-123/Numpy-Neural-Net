@@ -74,7 +74,7 @@ def shift_sequence(sequence, mode="left", shift=1, SHIFT_IDX=0):
         if mode == "left":
             shifted[shift:] = sequence[:-shift]
         elif mode == "right":
-            shifted[:-shift] = sequence[shift:]
+            shifted[:-shift] = sequence[:-shift]
         else:
             raise ValueError("Mode must be 'left' or 'right'")
     return shifted

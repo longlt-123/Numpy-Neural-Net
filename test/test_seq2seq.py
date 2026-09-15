@@ -70,11 +70,16 @@ Y_train = ["bonjour monde", "bon matin"]
 
 X_train, _, _, _, _, x_word_to_idx, x_idx_to_word = prepare_sequence_data(X_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode=None, shift=1, SHIFT_IDX=START_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
 Y_train_input, _, _, _, _, y_word_to_idx, y_idx_to_word = prepare_sequence_data(Y_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode="left", shift=1, SHIFT_IDX=START_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
-Y_train_target, _, Y_train_target_oh_masked, _, _, y_word_to_idx, y_idx_to_word = prepare_sequence_data(Y_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode="right", shift=1, SHIFT_IDX=END_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
+Y_train_target, Y_train_target_oh, Y_train_target_oh_masked, _, _, y_word_to_idx, y_idx_to_word = prepare_sequence_data(Y_train, vocab_size, word_to_index, index_to_word, max_len=None, shift_mode="right", shift=1, SHIFT_IDX=END_IDX, PAD_IDX=PAD_IDX, START_IDX=START_IDX, END_IDX=END_IDX, UNKNOWN_IDX=UNKNOWN_IDX)
 terminal_word = ["<START>", "<END>", "<PAD>", "<UNK>"]
 print("Vocabulary size:", len(x_word_to_idx))
 print("Input sequence shape:", X_train.shape)
 print("Input sequence:", X_train)
+
+print(Y_train_input)
+print(Y_train_target)
+print(Y_train_target_oh)
+print(Y_train_target_oh_masked)
 
 encoder = RNN(input_dim=vocab_size)
 encoder.add(Embedding(embedding_dim=emb_dim, transfer_weights=emb_matrix, freeze=True))
@@ -83,7 +88,7 @@ encoder.add(LSTM(hidden_state_dim=64, bidirectional=True, init_type="he", return
 decoder_emb = Embedding(
     embedding_dim=emb_dim, 
     transfer_weights=emb_matrix,
-    freeze=True
+    freeze=False
 )
 decoder_lstm = LSTM(hidden_state_dim=64*2, return_sequences=True)
 
@@ -105,8 +110,9 @@ model.add(Dense(vocab_size, activation="softmax"))
 print("Test luồng forward và backward có Attention")
 training_costs, validation_costs, _ = model.fit(
     training_set=(X_train, Y_train_input, Y_train_target_oh_masked), 
-    num_epochs=5, 
-    cost_function="categorical_cross_entropy", 
+    num_epochs=50, 
+    cost_function="categorical_cross_entropy",
+    learning_rate=0.005,
     optimizer="adam", 
     mini_batch_size=2
 )
